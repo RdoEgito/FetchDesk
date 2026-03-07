@@ -1,0 +1,277 @@
+﻿@using FetchDesk.Shared
+@page "/caixa"
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+
+<div class="container-fluid p-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Novo Pedido</h2>
+        <button class="btn btn-outline-primary" @onclick='() => NavigationManager.NavigateTo("/fechamento")'>
+            Ir para Fechamento <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">Dados do Cliente</h5>
+            <div class="form-group">
+                <label for="customerName">Nome (@_availableCustomers.Count clientes com conta aberta)</label>
+                <input id="customerName" list="customersList" class="form-control form-control-lg"
+                       @bind="_orderRequest.CustomerName" @bind:after="CheckCustomerTab"
+                       placeholder="Digite ou selecione o nome..." autocomplete="off" />
+                
+                <datalist id="customersList">
+                    @foreach (var customer in _availableCustomers)
+                    {
+                        <option value="@customer.Name"></option>
+                    }
+                </datalist>
+            </div>
+            
+            @if (_existingTabTotal > 0)
+            {
+                <div class="alert alert-warning mt-3 mb-0 py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-exclamation-circle me-2"></i>Este cliente já possui uma conta em aberto.</span>
+                    <strong class="fs-5">Dívida atual: @_existingTabTotal.ToString("C")</strong>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0 mt-1">Cardápio</h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Produto</th>
+                        <th class="text-center" style="width: 180px;">Quantidade</th>
+                        <th class="text-end pe-4" style="width: 150px;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!_productSelections.Any())
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center p-4 text-muted">Carregando produtos...</td>
+                        </tr>
+                    }
+                    @foreach (var item in _productSelections)
+                    {
+                        <tr>
+                            <td class="ps-3">
+                                <strong class="fs-5">@item.Product.Name</strong><br />
+                                <span class="text-muted">@item.Product.CurrentPrice.ToString("C")</span>
+                            </td>
+                            <td>
+                                <div class="input-group justify-content-center">
+                                    <button class="btn btn-outline-secondary px-3" type="button" @onclick="() => DecrementQuantity(item)" disabled="@(item.Quantity <= 0)">
+                                        <b>-</b>
+                                    </button>
+                                    
+                                    <input type="number" class="form-control text-center fw-bold bg-white" @bind="item.Quantity" min="0" style="max-width: 60px;" readonly />
+                                    
+                                    <button class="btn btn-outline-secondary px-3" type="button" @onclick="() => IncrementQuantity(item)">
+                                        <b>+</b>
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="text-end pe-4 fw-bold text-secondary">
+                                @((item.Quantity * item.Product.CurrentPrice).ToString("C"))
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-light p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted fs-5">Valor deste pedido:</span>
+                <span class="fs-4 fw-bold text-primary">@CurrentOrderTotal.ToString("C")</span>
+            </div>
+            
+            @if (_existingTabTotal > 0 && CurrentOrderTotal > 0)
+            {
+                <div class="d-flex justify-content-between align-items-center mb-3 pt-2 border-top">
+                    <span class="text-muted fw-bold">Novo total da conta será:</span>
+                    <span class="fs-5 fw-bolder text-danger">@((CurrentOrderTotal + _existingTabTotal).ToString("C"))</span>
+                </div>
+            }
+
+            <button class="btn btn-success btn-lg w-100" @onclick="SubmitOrder" disabled="@(!CanSubmitOrder)">
+                @if (_isSubmitting)
+                {
+                    <span>Processando...</span>
+                }
+                else
+                {
+                    <span>Finalizar Pedido (@TotalSelectedItems itens)</span>
+                }
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_feedbackMessage))
+    {
+        <div class="alert alert-info mt-3 fs-5 text-center">@_feedbackMessage</div>
+    }
+</div>
+
+@code {
+    private CreateOrderRequestDto _orderRequest = new();
+    private List<CustomerDto> _availableCustomers = new();
+    private List<ProductSelectionViewModel> _productSelections = new();
+    
+    private bool _isSubmitting = false;
+    private string _feedbackMessage = string.Empty;
+    private decimal _existingTabTotal = 0; // Armazena a dívida que já estava no banco
+
+    // Propriedades calculadas em tempo real pelo Blazor
+    private int TotalSelectedItems => _productSelections.Sum(p => p.Quantity);
+    private decimal CurrentOrderTotal => _productSelections.Sum(p => p.Quantity * p.Product.CurrentPrice);
+    private bool CanSubmitOrder => !_isSubmitting && TotalSelectedItems > 0 && !string.IsNullOrWhiteSpace(_orderRequest.CustomerName);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProductsAsync();
+        await LoadCustomersAsync();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        try
+        {
+            var response = await HttpClient.GetFromJsonAsync<GetProductsResponseDto>("/products");
+            
+            if (response != null && response.Products != null)
+            {
+                _productSelections = response.Products
+                    .Where(p => p.IsActive)
+                    .Select(p => new ProductSelectionViewModel { Product = p, Quantity = 0 })
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _feedbackMessage = $"Erro ao carregar o menu: {ex.Message}";
+        }
+    }
+
+    private async Task LoadCustomersAsync()
+    {
+        try
+        {
+            var response = await HttpClient.GetFromJsonAsync<GetCustomersResponseDto>("/customers");
+            if (response != null && response.Customers != null)
+            {
+                _availableCustomers = response.Customers
+                    .Where(c => c.IsTabOpen)
+                    .GroupBy(c => c.Name)
+                    .Select(g => g.First())
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao carregar clientes: {ex.Message}");
+        }
+    }
+
+    // Função que verifica se o cliente digitado já tem conta
+    private async Task CheckCustomerTab()
+    {
+        _existingTabTotal = 0;
+        if (string.IsNullOrWhiteSpace(_orderRequest.CustomerName)) return;
+
+        // Procura se o texto digitado bate com algum cliente da lista
+        var existingCustomer = _availableCustomers.FirstOrDefault(c =>
+            c.Name.Equals(_orderRequest.CustomerName, StringComparison.OrdinalIgnoreCase));
+        
+        if (existingCustomer != null)
+        {
+            try
+            {
+                // Bate no seu endpoint de tab para pegar o TotalAmount
+                var tab = await HttpClient.GetFromJsonAsync<GetCustomerTabResponseDto>($"/customers/{existingCustomer.Id}/tab");
+                if (tab != null)
+                {
+                    _existingTabTotal = tab.TotalAmount;
+                }
+            }
+            catch
+            {
+                // Falhas silenciosas de rede, apenas ignora para não travar a tela
+            }
+        }
+    }
+
+    private void IncrementQuantity(ProductSelectionViewModel item)
+    {
+        item.Quantity++;
+    }
+
+    private void DecrementQuantity(ProductSelectionViewModel item)
+    {
+        if (item.Quantity > 0)
+        {
+            item.Quantity--;
+        }
+    }
+
+    private async Task SubmitOrder()
+    {
+        if (string.IsNullOrWhiteSpace(_orderRequest.CustomerName))
+        {
+            _feedbackMessage = "Por favor, informe o nome do cliente.";
+            return;
+        }
+
+        _isSubmitting = true;
+        _feedbackMessage = string.Empty;
+
+        _orderRequest.Items = _productSelections
+            .Where(p => p.Quantity > 0)
+            .Select(p => new OrderItemRequestDto
+            {
+                ProductId = p.Product.Id,
+                Quantity = p.Quantity
+            }).ToList();
+
+        try
+        {
+            var response = await HttpClient.PostAsJsonAsync("/orders", _orderRequest);
+            if (response.IsSuccessStatusCode)
+            {
+                _feedbackMessage = "Pedido gerado com sucesso!";
+                
+                foreach (var item in _productSelections)
+                {
+                    item.Quantity = 0;
+                }
+                
+                await LoadCustomersAsync();
+                await CheckCustomerTab(); // Atualiza a dívida projetada na tela imediatamente
+            }
+            else
+            {
+                _feedbackMessage = "Erro ao gerar o pedido. Verifique os dados.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _feedbackMessage = $"Erro de conexão: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    public class ProductSelectionViewModel
+    {
+        public ProductDto Product { get; set; } = new();
+        public int Quantity { get; set; } = 0;
+    }
+}

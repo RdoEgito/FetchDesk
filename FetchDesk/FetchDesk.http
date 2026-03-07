@@ -1,0 +1,6 @@
+@fetch_desk_HostAddress = http://localhost:5138
+
+GET {{fetch_desk_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

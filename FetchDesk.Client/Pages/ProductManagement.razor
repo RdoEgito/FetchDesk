@@ -1,0 +1,235 @@
+﻿@page "/produtos"
+@using FetchDesk.Shared
+@inject HttpClient HttpClient
+
+<div class="container-fluid p-3">
+    <h2 class="mb-4">Gestão de Cardápio</h2>
+
+    <div class="row">
+        <div class="col-12 col-md-4 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header @(_isEditing ? "bg-warning" : "bg-primary") text-white">
+                    <h5 class="mb-0">
+                        @(_isEditing ? "Editar Produto" : "Novo Produto")
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@_productModel" OnValidSubmit="SaveProductAsync">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Nome</label>
+                            <InputText class="form-control" @bind-Value="_productModel.Name" onfocus="this.select();" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Preço (R$)</label>
+                            <InputNumber class="form-control" @bind-Value="_productModel.CurrentPrice" step="0.01" min="0" onfocus="this.select();" required />
+                        </div>
+                        
+                        @if (_isEditing)
+                        {
+                            <div class="form-check form-switch mb-4">
+                                <InputCheckbox class="form-check-input" id="isActiveSwitch" @bind-Value="_productModel.IsActive" />
+                                <label class="form-check-label" for="isActiveSwitch">Ativo (Aparece no Caixa)</label>
+                            </div>
+                        }
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn @(_isEditing ? "btn-warning" : "btn-primary") text-white fw-bold">
+                                <i class="bi bi-save me-2"></i> Salvar
+                            </button>
+                            @if (_isEditing)
+                            {
+                                <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">
+                                    Cancelar Edição
+                                </button>
+                            }
+                        </div>
+                    </EditForm>
+
+                    @if (!string.IsNullOrEmpty(_feedbackMessage))
+                    {
+                        <div class="alert alert-info mt-3 mb-0 text-center">@_feedbackMessage</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="ps-3">Produto</th>
+                                <th class="text-end">Preço Atual</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center pe-3">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!_products.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center p-4 text-muted">Nenhum produto cadastrado.</td>
+                                </tr>
+                            }
+                            @foreach (var product in _products)
+                            {
+                                <tr>
+                                    <td class="ps-3 fw-bold">@product.Name</td>
+                                    <td class="text-end">@product.CurrentPrice.ToString("C")</td>
+                                    <td class="text-center">
+                                        @if (product.IsActive)
+                                        {
+                                            <span class="badge bg-success">Ativo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inativo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center pe-3">
+                                        <button class="btn btn-sm btn-outline-primary me-2" title="Editar" @onclick="() => EditProduct(product)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" title="Excluir" @onclick="() => DeleteProductAsync(product.Id)" disabled="@(!product.IsActive)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ProductDto> _products = new();
+    private ProductFormModel _productModel = new();
+    private bool _isEditing = false;
+    private string _feedbackMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProductsAsync();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        try
+        {
+            var response = await HttpClient.GetFromJsonAsync<GetProductsResponseDto>("/products");
+            if (response != null && response.Products != null)
+            {
+                _products = response.Products
+                    .OrderByDescending(p => p.IsActive)
+                    .ThenBy(p => p.Name)
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _feedbackMessage = $"Erro ao carregar os produtos: {ex.Message}";
+        }
+    }
+
+    private async Task SaveProductAsync()
+    {
+        _feedbackMessage = string.Empty;
+
+        try
+        {
+            HttpResponseMessage response;
+
+            if (_isEditing)
+            {
+                var updateRequest = new
+                {
+                    Name = _productModel.Name,
+                    CurrentPrice = _productModel.CurrentPrice,
+                    IsActive = _productModel.IsActive
+                };
+                
+                response = await HttpClient.PutAsJsonAsync($"/products/{_productModel.Id}", updateRequest);
+            }
+            else
+            {
+                var createRequest = new
+                {
+                    Name = _productModel.Name,
+                    CurrentPrice = _productModel.CurrentPrice
+                };
+                
+                response = await HttpClient.PostAsJsonAsync("/products", createRequest);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                _feedbackMessage = _isEditing ? "Produto atualizado com sucesso!" : "Produto criado com sucesso!";
+                CancelEdit();
+                await LoadProductsAsync();
+            }
+            else
+            {
+                _feedbackMessage = "Erro ao salvar o produto.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _feedbackMessage = $"Erro de conexão: {ex.Message}";
+        }
+    }
+
+    private void EditProduct(ProductDto product)
+    {
+        _isEditing = true;
+        _productModel = new ProductFormModel
+        {
+            Id = product.Id,
+            Name = product.Name,
+            CurrentPrice = product.CurrentPrice,
+            IsActive = product.IsActive
+        };
+        _feedbackMessage = string.Empty;
+    }
+
+    private async Task DeleteProductAsync(Guid id)
+    {
+        _feedbackMessage = string.Empty;
+        
+        try
+        {
+            var response = await HttpClient.DeleteAsync($"/products/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                _feedbackMessage = "Produto desativado com sucesso!";
+                await LoadProductsAsync();
+            }
+            else
+            {
+                _feedbackMessage = "Erro ao desativar o produto.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _feedbackMessage = $"Erro de conexão: {ex.Message}";
+        }
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+        _productModel = new ProductFormModel();
+        _feedbackMessage = string.Empty;
+    }
+
+    public class ProductFormModel
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public decimal CurrentPrice { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+}

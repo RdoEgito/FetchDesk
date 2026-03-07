@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="FetchDesk.Client/FetchDesk.Client.csproj" />
+  <Project Path="FetchDesk.Shared/FetchDesk.Shared.csproj" />
+  <Project Path="FetchDesk/FetchDesk.csproj" />
+</Solution>

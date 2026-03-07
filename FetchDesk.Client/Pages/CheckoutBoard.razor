@@ -1,0 +1,292 @@
+﻿@page "/fechamento"
+@using FetchDesk.Shared
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+
+<div class="container-fluid p-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Fechamento de Conta</h2>
+        <button class="btn btn-outline-primary" @onclick='() => NavigationManager.NavigateTo("/caixa")'>
+            <i class="bi bi-arrow-left me-1"></i> Voltar para Pedidos
+        </button>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-md-4 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Contas Abertas</h5>
+                </div>
+                <div class="list-group list-group-flush">
+                    @if (!_openCustomers.Any())
+                    {
+                        <div class="p-4 text-center text-muted">Nenhuma conta aberta.</div>
+                    }
+                    else
+                    {
+                        @foreach (var customer in _openCustomers)
+                        {
+                            <button type="button" 
+                                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center @(customer.Id == _selectedCustomerId ? "active" : "")"
+                                    @onclick="() => SelectCustomer(customer.Id)">
+                                <strong>@customer.Name</strong>
+                                
+                                @* Selo visual para mostrar que a conta já foi paga nesta sessão *@
+                                @if (!customer.IsTabOpen)
+                                {
+                                    <span class="badge bg-success rounded-pill">Pago</span>
+                                }
+                            </button>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-8">
+            @if (_isLoadingTab)
+            {
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Carregando conta...</p>
+                </div>
+            }
+            else if (_currentTab != null)
+            {
+                <div class="card shadow border-0">
+                    <div class="card-header bg-white border-bottom border-2 py-3 d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0 text-primary">Conta: @_currentTab.Name</h4>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Produto</th>
+                                    <th class="text-center">Qtd</th>
+                                    <th class="text-end">V. Unitário</th>
+                                    <th class="text-end pe-4">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!_currentTab.Orders.Any() || !_currentTab.Orders.SelectMany(o => o.Items).Any())
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center p-4 text-muted">Nenhum consumo pendente.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var item in GetConsolidatedItems())
+                                    {
+                                        <tr>
+                                            <td class="ps-4 fw-bold">@item.ProductName</td>
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    @if (item.CancellableQuantity > 0 && _currentTab.IsTabOpen)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-danger py-0 px-2"
+                                                                title="Devolver item"
+                                                                @onclick="() => ReturnItemAsync(item.ProductId)">
+                                                            <i class="bi bi-dash"></i>
+                                                        </button>
+                                                    }
+                                                    <span class="fs-5">@item.Quantity</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-end">@item.UnitPrice.ToString("C")</td>
+                                            <td class="text-end pe-4">@item.SubTotal.ToString("C")</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer bg-light p-4 d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted text-uppercase fw-bold" style="letter-spacing: 1px;">Total a Pagar</span>
+                            <h2 class="mb-0 text-success fw-bolder">@_currentTab.TotalAmount.ToString("C")</h2>
+                        </div>
+                        
+                        @* Troca dinâmica do botão de pagamento baseada no status local da conta *@
+                        @if (!_currentTab.IsTabOpen)
+                        {
+                            <button class="btn btn-secondary btn-lg px-5 shadow-sm" disabled>
+                                <i class="bi bi-check-all me-2"></i> <span>Pago</span>
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-success btn-lg px-5 shadow-sm" @onclick="CloseTab" disabled="@_isProcessingPayment">
+                                @if (_isProcessingPayment)
+                                {
+                                    <span>Processando...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-circle me-2"></i> <span>Receber Pagamento</span>
+                                }
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(_feedbackMessage))
+                {
+                    <div class="alert alert-info mt-3">@_feedbackMessage</div>
+                }
+            }
+            else
+            {
+                <div class="card shadow-sm border-0 h-100 bg-light d-flex align-items-center justify-content-center" style="min-height: 300px;">
+                    <h5 class="text-muted">Selecione um cliente ao lado para ver a conta.</h5>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<CustomerDto> _openCustomers = new();
+    private Guid? _selectedCustomerId;
+    private GetCustomerTabResponseDto? _currentTab;
+    
+    private bool _isLoadingTab = false;
+    private bool _isProcessingPayment = false;
+    private string _feedbackMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOpenCustomersAsync();
+    }
+
+    private async Task LoadOpenCustomersAsync()
+    {
+        try
+        {
+            var response = await HttpClient.GetFromJsonAsync<GetCustomersResponseDto>("/customers");
+            if (response != null && response.Customers != null)
+            {
+                _openCustomers = response.Customers.Where(c => c.IsTabOpen).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao carregar clientes: {ex.Message}");
+        }
+    }
+
+    private async Task SelectCustomer(Guid customerId)
+    {
+        _selectedCustomerId = customerId;
+        _isLoadingTab = true;
+        _feedbackMessage = string.Empty;
+        _currentTab = null;
+
+        try
+        {
+            _currentTab = await HttpClient.GetFromJsonAsync<GetCustomerTabResponseDto>($"/customers/{customerId}/tab");
+        }
+        catch (Exception ex)
+        {
+            _feedbackMessage = $"Erro ao carregar a conta: {ex.Message}";
+        }
+        finally
+        {
+            _isLoadingTab = false;
+        }
+    }
+
+    private async Task ReturnItemAsync(Guid productId)
+    {
+        if (_selectedCustomerId == null) return;
+        try
+        {
+            var response = await HttpClient.DeleteAsync($"/customers/{_selectedCustomerId}/items/{productId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                // Recarrega a conta do cliente para atualizar a quantidade e o valor total na tela
+                await SelectCustomer(_selectedCustomerId.Value);
+            }
+            else
+            {
+                _feedbackMessage = "Não foi possível devolver o item. Ele pode já ter sido entregue no balcão.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _feedbackMessage = $"Erro de conexão: {ex.Message}";
+        }
+    }
+
+    private async Task CloseTab()
+    {
+        if (_selectedCustomerId == null) return;
+
+        _isProcessingPayment = true;
+        _feedbackMessage = string.Empty;
+
+        try
+        {
+            var response = await HttpClient.PatchAsync($"/customers/{_selectedCustomerId}/close-tab", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                // ATUALIZAÇÃO LOCAL: Apenas alteramos os estados para "false" em vez de apagar a tela
+                if (_currentTab != null)
+                {
+                    _currentTab.IsTabOpen = false;
+                }
+
+                // Atualizamos o status do cliente na lista lateral para exibir o badge "Pago"
+                var customerInList = _openCustomers.FirstOrDefault(c => c.Id == _selectedCustomerId);
+                if (customerInList != null)
+                {
+                    customerInList.IsTabOpen = false;
+                }
+
+                _feedbackMessage = "Pagamento recebido com sucesso!";
+            }
+            else
+            {
+                _feedbackMessage = "Erro ao processar o fechamento da conta.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _feedbackMessage = $"Erro de conexão: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessingPayment = false;
+        }
+    }
+
+    private IEnumerable<ReceiptItemViewModel> GetConsolidatedItems()
+    {
+        if (_currentTab == null) return Array.Empty<ReceiptItemViewModel>();
+
+        return _currentTab.Orders
+            .SelectMany(o => o.Items)
+            .GroupBy(i => new { i.ProductId, Price = i.PriceAtPurchase, Name = i.Product?.Name })
+            .Select(g => new ReceiptItemViewModel
+            {                
+                ProductId = g.Key.ProductId,
+                ProductName = string.IsNullOrWhiteSpace(g.Key.Name) ? "Produto não identificado" : g.Key.Name,
+                Quantity = g.Count(),
+                CancellableQuantity = g.Count(i => !i.IsDelivered),
+                UnitPrice = g.Key.Price,
+                SubTotal = g.Sum(i => i.PriceAtPurchase)
+            });
+    }
+
+    private class ReceiptItemViewModel
+    {
+        public Guid ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public int CancellableQuantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal SubTotal { get; set; }
+    }
+}

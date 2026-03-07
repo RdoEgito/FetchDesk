@@ -1,0 +1,260 @@
+﻿@page "/balcao"
+@using FetchDesk.Shared
+@using Microsoft.AspNetCore.SignalR.Client
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<style>
+    .item-row {
+        transition: all 0.3s ease-in-out;
+    }
+
+    .item-delivered {
+        background-color: #f8f9fa !important;
+        opacity: 0.6;
+        animation: dropDown 0.5s ease-out;
+    }
+
+    .text-strikethrough {
+        text-decoration: line-through;
+        color: #6c757d;
+    }
+    
+    .flash-update {
+        animation: blinkAnimation 0.5s ease-in-out;
+    }
+
+    @@keyframes blinkAnimation {
+        0% { opacity: 1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 1; }
+    }
+
+    @@keyframes dropDown {
+        0% {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        100% {
+            opacity: 0.6;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<div class="container-fluid p-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Fila de Entrega</h2>
+        <button class="btn btn-outline-secondary shadow-sm" @onclick="RefreshQueueAsync" disabled="@_isRefreshing">
+            @if (_isRefreshing)
+            {
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                <span class="ms-1">Atualizando...</span>
+            }
+            else
+            {
+                <i class="bi bi-arrow-clockwise me-1"></i> <span>Atualizar Fila</span>
+            }
+        </button>
+    </div>
+
+    @if (!_isConnected)
+    {
+        <div class="alert alert-warning shadow-sm">Conectando ao servidor em tempo real...</div>
+    }
+
+    @if (!_pendingItems.Any())
+    {
+        <div class="alert alert-success text-center shadow-sm fs-5">
+            Nenhum item pendente no momento. Bom trabalho!
+        </div>
+    }
+    else
+    {
+        <div class="row @(_isFlashing ? "flash-update" : "")">
+            <div class="col-12 col-md-8 col-lg-6">
+                @foreach (var customerGroup in _pendingItems.GroupBy(i => string.IsNullOrWhiteSpace(i.CustomerName) ? "Unknown Name" : i.CustomerName))
+                {
+                    <div class="card mb-4 shadow-sm border-0">
+                        <div class="card-header bg-primary text-white py-2">
+                            <h5 class="mb-0">
+                                <i class="bi bi-person-fill me-2"></i>@customerGroup.Key
+                            </h5>
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            @foreach (var item in customerGroup.OrderBy(i => i.IsDelivered))
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center p-3 item-row @(item.IsDelivered ? "item-delivered" : "hover-bg-light")">
+                                    <div>
+                                        <strong class="fs-5 d-block @(item.IsDelivered ? "text-strikethrough" : "")">
+                                            @item.ProductName
+                                        </strong>
+                                        <span class="text-muted small">Ficha: @item.ItemId.ToString().Substring(0, 8)</span>
+                                    </div>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        @if (item.IsDelivered)
+                                        {
+                                            <button class="btn btn-sm btn-outline-warning rounded-circle px-2" 
+                                                    title="Desfazer entrega" 
+                                                    @onclick="() => RevertDelivery(item.ItemId)">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        }
+                                        <button class="btn btn-sm px-3 rounded-pill fw-bold @(item.IsDelivered ? "btn-secondary" : "btn-outline-success")" 
+                                                @onclick="() => MarkAsDelivered(item.ItemId)" 
+                                                disabled="@item.IsDelivered">
+                                            @(item.IsDelivered ? "Entregue" : "Entregar")
+                                        </button>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private HubConnection? _hubConnection;
+    private List<PendingItemDto> _pendingItems = new();
+    private bool _isConnected => _hubConnection?.State == HubConnectionState.Connected;
+    private bool _isRefreshing = false;
+    private bool _isFlashing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingItemsAsync();
+
+        var hubUrl = new Uri(HttpClient.BaseAddress!, "orderhub");
+        
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(hubUrl)
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<List<PendingItemDto>>("ReceiveNewItems", (newItems) =>
+        {
+            _pendingItems.AddRange(newItems);
+            InvokeAsync(StateHasChanged);
+        });
+
+        _hubConnection.On<Guid>("ItemCancelled", (cancelledItemId) =>
+        {
+            var itemToRemove = _pendingItems.FirstOrDefault(i => i.ItemId == cancelledItemId);
+            if (itemToRemove != null)
+            {
+                _pendingItems.Remove(itemToRemove);
+                InvokeAsync(StateHasChanged); // Atualiza a tela imediatamente
+            }
+        });
+
+        await _hubConnection.StartAsync();
+    }
+
+    private async Task LoadPendingItemsAsync()
+    {
+        try
+        {
+            var response = await HttpClient.GetFromJsonAsync<GetPendingItemsResponseDto>("/items");
+            if (response != null && response.OrdersItems != null)
+            {
+                _pendingItems = response.OrdersItems;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading initial items: {ex.Message}");
+        }
+    }
+
+    private async Task RefreshQueueAsync()
+    {
+        _isRefreshing = true;
+        
+        var minDelayTask = Task.Delay(2000);
+        var loadTask = LoadPendingItemsAsync();
+        
+        await Task.WhenAll(minDelayTask, loadTask);
+        
+        _isRefreshing = false;
+        
+        _isFlashing = true;
+        
+        await Task.Delay(500);
+        
+        _isFlashing = false;
+    }
+
+    private async Task MarkAsDelivered(Guid itemId)
+    {
+        var itemToUpdate = _pendingItems.FirstOrDefault(i => i.ItemId == itemId);
+        if (itemToUpdate != null)
+        {
+            itemToUpdate.IsDelivered = true;
+        }
+
+        try
+        {
+            var response = await HttpClient.PatchAsync($"/items/{itemId}/deliver", null);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                if (itemToUpdate != null)
+                {
+                    itemToUpdate.IsDelivered = false;
+                }
+                Console.WriteLine("Failed to mark as delivered in the API.");
+            }
+        }
+        catch (Exception ex)
+        {
+            if (itemToUpdate != null)
+            {
+                itemToUpdate.IsDelivered = false;
+            }
+            Console.WriteLine($"Error delivering item: {ex.Message}");
+        }
+    }
+
+    private async Task RevertDelivery(Guid itemId)
+    {
+        var itemToUpdate = _pendingItems.FirstOrDefault(i => i.ItemId == itemId);
+        if (itemToUpdate != null)
+        {
+            itemToUpdate.IsDelivered = false;
+        }
+
+        try
+        {
+            var response = await HttpClient.PatchAsync($"/items/{itemId}/deliver/revert", null);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                if (itemToUpdate != null)
+                {
+                    itemToUpdate.IsDelivered = true;
+                }
+                Console.WriteLine("Failed to revert delivery in the API.");
+            }
+        }
+        catch (Exception ex)
+        {
+            if (itemToUpdate != null)
+            {
+                itemToUpdate.IsDelivered = true;
+            }
+            Console.WriteLine($"Error reverting item: {ex.Message}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.DisposeAsync();
+        }
+    }
+}
