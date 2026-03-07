@@ -1,29 +1,24 @@
-# Base image for running the application
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-WORKDIR /app
-EXPOSE 8080
-
-# Build image with SDK
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
+# Estágio de Build - Atualizado para 10.0
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Copy the project file and restore dependencies
-COPY ["fetch-desk/fetch-desk.csproj", "fetch-desk/"]
-RUN dotnet restore "./fetch-desk/fetch-desk.csproj"
+# Copiar arquivos de projeto e restaurar dependências
+COPY ["FetchDesk/FetchDesk.csproj", "FetchDesk/"]
+COPY ["FetchDesk.Shared/FetchDesk.Shared.csproj", "FetchDesk.Shared/"]
+RUN dotnet restore "FetchDesk/FetchDesk.csproj"
 
-# Copy the remaining source code and build
+# Copiar o restante do código e compilar
 COPY . .
-WORKDIR "/src/fetch-desk"
-RUN dotnet build "./fetch-desk.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/FetchDesk"
+RUN dotnet build "FetchDesk.csproj" -c Release -o /app/build
 
-# Publish the application
+# Publicar
 FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./fetch-desk.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "FetchDesk.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-# Final image configuration
-FROM base AS final
+# Estágio Final - Atualizado para 10.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+EXPOSE 8080
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "fetch-desk.dll"]
+ENTRYPOINT ["dotnet", "FetchDesk.dll"]
