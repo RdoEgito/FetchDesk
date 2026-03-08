@@ -17,14 +17,13 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Publish Front-end
-        run: dotnet publish FetchDesk.Client/FetchDesk.Client.csproj -c Release -o release
+        run: dotnet publish FetchDesk.Client/FetchDesk.Client.csproj -c Release -o release/publish
 
-      # Ajuste para rotas no GitHub Pages (evita erro 404 ao dar F5)
       - name: Fix 404 on GitHub Pages
-        run: cp release/wwwroot/index.html release/wwwroot/404.html
+        run: cp release/publish/wwwroot/index.html release/publish/wwwroot/404.html
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: release/wwwroot
-          branch: gh-pages # O GitHub criará essa branch automaticamente
+          folder: release/publish/wwwroot # Caminho exato para os arquivos estáticos
+          branch: gh-pages
