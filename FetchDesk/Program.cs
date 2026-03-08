@@ -59,10 +59,17 @@ namespace fetch_desk
             {
                 options.AddDefaultPolicy(builder =>
                 {
-                    builder.WithOrigins("https://localhost:5005", "http://localhost:5005", "https://localhost:7259", "https://localhost:7173", "http://localhost:5138")
-                           .AllowAnyHeader()
-                           .AllowAnyMethod()
-                           .AllowCredentials();
+                    builder
+                        .WithOrigins(
+                            "https://localhost:5005",
+                            "http://localhost:5005",
+                            "https://localhost:7259",
+                            "https://localhost:7173",
+                            "http://localhost:5138",
+                            "https://rdoegito.github.io")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
                 });
             });
 
