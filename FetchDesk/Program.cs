@@ -15,7 +15,8 @@ namespace fetch_desk
             var builder = WebApplication.CreateBuilder(args);
 
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                ?? builder.Configuration["ConnectionStrings:DefaultConnection"];
+                ?? builder.Configuration["ConnectionStrings:DefaultConnection"]
+                ?? builder.Configuration["DATABASE_URL"];
 
             if (string.IsNullOrEmpty(connectionString))
             {
