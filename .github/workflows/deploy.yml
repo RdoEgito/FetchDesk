@@ -2,28 +2,31 @@ name: Deploy FetchDesk
 
 on:
   push:
-    branches: [ main ] # Dispara o deploy sempre que houver push na main
+    branches:
+      - main
 
 jobs:
-  # JOB 1: Deploy do Front-end para o GitHub Pages
   deploy-frontend:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET 10
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
-      - name: Publish Front-end
+      - name: Publish Blazor
         run: dotnet publish FetchDesk.Client/FetchDesk.Client.csproj -c Release -o release/publish
 
-      - name: Fix 404 on GitHub Pages
-        run: cp release/publish/wwwroot/index.html release/publish/wwwroot/404.html
+      - name: Fix SPA routing
+        run: |
+          cp release/publish/wwwroot/index.html release/publish/wwwroot/404.html
+          touch release/publish/wwwroot/.nojekyll
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: release/publish/wwwroot # Caminho exato para os arquivos estáticos
           branch: gh-pages
+          folder: release/publish/wwwroot
