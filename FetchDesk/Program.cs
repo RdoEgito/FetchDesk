@@ -21,16 +21,25 @@ namespace fetch_desk
 
             builder.Services.AddMassTransit(x =>
             {
-                // Registra o consumidor (worker) que lerá a fila
+                //x.SetKeyNameService(new MassTransit.Configuration.ConstantKeyNameService("community"));
+
                 x.AddConsumer<OrderPlacedConsumer>();
 
                 x
                 .UsingRabbitMq((context, cfg) =>
                 {
-                    cfg.Host("localhost", "/", h => {
-                        h.Username("guest");
-                        h.Password("guest");
-                    });
+                    //cfg.Host("localhost", "/", h => {
+                    //    h.Username("guest");
+                    //    h.Password("guest");
+                    //});
+
+                    // Pega a URL do CloudAMQP das variáveis de ambiente
+                    var rabbitUrl = builder.Configuration.GetValue<string>("RABBITMQ_URL")
+                        ?? "rabbitmq://localhost"; // Fallback para dev local
+
+                    cfg.Host(new Uri(rabbitUrl));
+
+                    cfg.ConfigureEndpoints(context);
 
                     // Configura a fila que receberá os pedidos
                     cfg.ReceiveEndpoint("delivery-queue", e =>
