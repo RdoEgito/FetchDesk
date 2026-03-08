@@ -66,7 +66,8 @@ namespace fetch_desk
                             "https://localhost:7259",
                             "https://localhost:7173",
                             "http://localhost:5138",
-                            "https://rdoegito.github.io")
+                            "https://rdoegito.github.io",
+                            "https://fetchdesk.pages.dev")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();
