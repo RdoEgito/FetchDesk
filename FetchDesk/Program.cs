@@ -71,12 +71,12 @@ namespace fetch_desk
             app.UseCors();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
+            //if (app.Environment.IsDevelopment())
+            //{
                 app.UseSwagger();
                 app.UseSwaggerUI();
                 app.MapOpenApi();
-            }
+            //}
 
             app.MapHub<OrderHub>("/orderhub");
 
