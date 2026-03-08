@@ -25,23 +25,15 @@ namespace fetch_desk
 
                 x.AddConsumer<OrderPlacedConsumer>();
 
-                x
-                .UsingRabbitMq((context, cfg) =>
+                x.UsingRabbitMq((context, cfg) =>
                 {
-                    //cfg.Host("localhost", "/", h => {
-                    //    h.Username("guest");
-                    //    h.Password("guest");
-                    //});
-
                     // Pega a URL do CloudAMQP das variáveis de ambiente
                     var rabbitUrl = builder.Configuration.GetValue<string>("RABBITMQ_URL")
-                        ?? "rabbitmq://localhost"; // Fallback para dev local
+                        ?? "rabbitmq://localhost";
 
                     cfg.Host(new Uri(rabbitUrl));
-
                     cfg.ConfigureEndpoints(context);
 
-                    // Configura a fila que receberá os pedidos
                     cfg.ReceiveEndpoint("delivery-queue", e =>
                     {
                         e.ConfigureConsumer<OrderPlacedConsumer>(context);
