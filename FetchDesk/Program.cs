@@ -14,7 +14,13 @@ namespace fetch_desk
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                ?? builder.Configuration["ConnectionStrings:DefaultConnection"];
+
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new Exception("Connection string 'DefaultConnection' not found.");
+            }
 
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(connectionString));
