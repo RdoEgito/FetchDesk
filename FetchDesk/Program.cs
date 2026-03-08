@@ -67,7 +67,8 @@ namespace fetch_desk
                             "https://localhost:7173",
                             "http://localhost:5138",
                             "https://rdoegito.github.io",
-                            "https://fetchdesk.pages.dev")
+                            "https://fetchdesk.pages.dev",
+                            "https://fetchdesk-client.onrender.com")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials();
