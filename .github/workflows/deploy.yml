@@ -2,31 +2,26 @@ name: Deploy FetchDesk
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup .NET
+      - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
-      - name: Publish Blazor
-        run: dotnet publish FetchDesk.Client/FetchDesk.Client.csproj -c Release -o release/publish
+      - name: Publish Front-end
+        run: dotnet publish FetchDesk.Client/FetchDesk.Client.csproj -c Release -o release
 
-      - name: Fix SPA routing
-        run: |
-          cp release/publish/wwwroot/index.html release/publish/wwwroot/404.html
-          touch release/publish/wwwroot/.nojekyll
-
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
         with:
-          branch: gh-pages
-          folder: release/publish/wwwroot
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: fetchdesk
+          directory: release/wwwroot
