@@ -1,12 +1,13 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
+import type { Request, Response, NextFunction } from "express";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.use((req, res, next) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     res.set({
       "Cache-Control": "no-cache, no-store, must-revalidate",
       "Pragma": "no-cache",
