@@ -6,19 +6,20 @@ const common_1 = require("@nestjs/common");
 const app_module_1 = require("./app.module");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.use((req, res, next) => {
+        res.set({
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        });
+        next();
+    });
     app.enableCors({
         origin: [
             "http://localhost",
-            "https://localhost",
-            "http://127.0.0.1",
-            "https://127.0.0.1",
-            "http://localhost:5000",
             "http://localhost:5173",
-            "https://localhost:5005",
-            "http://localhost:5005",
-            "https://localhost:7259",
-            "https://localhost:7173",
-            "http://localhost:5138",
+            "http://localhost:8080",
+            process.env.FRONTEND_URL || "https://your-app.vercel.app",
             "https://rdoegito.github.io",
             "https://fetchdesk.pages.dev",
             "https://fetchdesk-client.onrender.com",

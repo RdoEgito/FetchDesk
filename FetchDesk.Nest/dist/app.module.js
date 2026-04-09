@@ -17,6 +17,7 @@ const customers_controller_1 = require("./customers/customers.controller");
 const items_controller_1 = require("./items/items.controller");
 const orders_controller_1 = require("./orders/orders.controller");
 const products_controller_1 = require("./products/products.controller");
+const health_controller_1 = require("./health.controller");
 const order_gateway_1 = require("./realtime/order.gateway");
 const rabbit_service_1 = require("./rabbit/rabbit.service");
 let AppModule = class AppModule {
@@ -27,15 +28,23 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             typeorm_1.TypeOrmModule.forRoot({
                 type: "postgres",
-                url: process.env.DATABASE_URL ??
-                    process.env.ConnectionStrings__DefaultConnection ??
-                    "postgres://admin:adminpassword@localhost:5432/order_management_db",
+                host: process.env.DATABASE_HOST ?? "localhost",
+                port: parseInt(process.env.DATABASE_PORT ?? "5432"),
+                username: process.env.DATABASE_USER ?? "admin",
+                password: process.env.DATABASE_PASSWORD ?? "adminpassword",
+                database: process.env.DATABASE_NAME ?? "order_management_db",
                 entities: [product_entity_1.ProductEntity, customer_entity_1.CustomerEntity, order_entity_1.OrderEntity, order_item_entity_1.OrderItemEntity],
                 synchronize: true,
             }),
             typeorm_1.TypeOrmModule.forFeature([product_entity_1.ProductEntity, customer_entity_1.CustomerEntity, order_entity_1.OrderEntity, order_item_entity_1.OrderItemEntity]),
         ],
-        controllers: [products_controller_1.ProductsController, orders_controller_1.OrdersController, customers_controller_1.CustomersController, items_controller_1.ItemsController],
+        controllers: [
+            health_controller_1.HealthController,
+            products_controller_1.ProductsController,
+            orders_controller_1.OrdersController,
+            customers_controller_1.CustomersController,
+            items_controller_1.ItemsController,
+        ],
         providers: [order_gateway_1.OrderGateway, rabbit_service_1.RabbitService],
     })
 ], AppModule);
