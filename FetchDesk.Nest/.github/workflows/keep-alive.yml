@@ -1,0 +1,14 @@
+name: Keep Render App Alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # A cada 10 minutos
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API
+        run: |
+          curl -f https://fetchdesk-nest.onrender.com/health || exit 1

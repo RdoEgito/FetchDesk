@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: fetchdesk-nest
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node dist/main.js
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_HOST
+        fromDatabase:
+          name: fetchdesk-postgres
+          property: host
+      - key: DATABASE_PORT
+        fromDatabase:
+          name: fetchdesk-postgres
+          property: port
+      - key: DATABASE_NAME
+        fromDatabase:
+          name: fetchdesk-postgres
+          property: database
+      - key: DATABASE_USER
+        fromDatabase:
+          name: fetchdesk-postgres
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: fetchdesk-postgres
+          property: password
+      - key: RABBITMQ_URL
+        value: amqps:${CLOUDAMQP_URL}
+
+databases:
+  - name: fetchdesk-postgres
+    databaseName: fetchdesk_db
+    user: fetchdesk_user
+    region: ohio
+    plan: free

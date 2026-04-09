@@ -1,0 +1,41 @@
+.item-row {
+  transition: all 0.3s ease-in-out;
+}
+
+.item-delivered {
+  background-color: #f8f9fa !important;
+  opacity: 0.6;
+  animation: dropDown 0.5s ease-out;
+}
+
+.text-strikethrough {
+  text-decoration: line-through;
+  color: #6c757d;
+}
+
+.flash-update {
+  animation: blinkAnimation 0.5s ease-in-out;
+}
+
+@keyframes blinkAnimation {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes dropDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 0.6;
+    transform: translateY(0);
+  }
+}
