@@ -96,17 +96,20 @@ Separa os valores:
 
 ---
 
-## 5️⃣ Deploy do Backend - Render
+## 5️⃣ Deploy do Backend - Render (Docker)
 
 ### Passo 1: Conectar ao Render
 
 1. Acessa https://render.com
 2. Clica em **New** → **Web Service**
 3. Seleciona seu repositório do GitHub
-4. Configura:
+4. Escolhe a opção de **Docker** (não o serviço Node padrão)
+5. Configura:
    - **Name**: `fetchdesk-nest`
-   - **Start Command**: `node dist/main.js`
    - **Instance Type**: `Free`
+   - **Dockerfile Path**: `Dockerfile`
+   - **Docker Command**: deixa em branco
+   - **Pre-Deploy Command**: deixa em branco
 
 ### Passo 2: Variáveis de Ambiente
 
