@@ -125,6 +125,16 @@ RABBITMQ_URL=<url-completa-do-cloudamqp>
 
 > Se você preferir usar variáveis separadas, ainda funciona. Mas em Render/Docker é mais confiável passar `DATABASE_URL` completo e `DATABASE_SSL=true`.
 
+## Deployment do Frontend
+
+No Vercel, em **Environment Variables**, adicione:
+
+```env
+VITE_API_URL = https://fetchdesk-nest.onrender.com
+```
+
+Esse nome de variável corresponde ao `api.js` do frontend e evita que o app use `http://localhost:5000` em produção.
+
 ### Passo 3: Deploy
 
 Clica em **Create Web Service** - início automático do deploy

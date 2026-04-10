@@ -1,5 +1,15 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.trim() || "http://localhost:5000";
+const API_BASE_URL = (() => {
+  const url = import.meta.env.VITE_API_URL?.trim() || import.meta.env.VITE_API_BASE_URL?.trim();
+  if (url) {
+    return url;
+  }
+
+  if (import.meta.env.MODE === "production") {
+    throw new Error("Missing VITE_API_URL in production build");
+  }
+
+  return "http://localhost:5000";
+})();
 
 export function getApiBaseUrl() {
   return API_BASE_URL;
