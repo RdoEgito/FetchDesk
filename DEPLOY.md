@@ -118,13 +118,12 @@ Na aba **Environment**, adiciona:
 ```env
 NODE_ENV=production
 FRONTEND_URL=https://<seu-app>.vercel.app
-DATABASE_HOST=<do-neon>
-DATABASE_PORT=5432
-DATABASE_NAME=<do-neon>
-DATABASE_USER=<do-neon>
-DATABASE_PASSWORD=<do-neon>
+DATABASE_URL=postgres://<user>:<password>@<host>:5432/<dbname>?sslmode=require
+DATABASE_SSL=true
 RABBITMQ_URL=<url-completa-do-cloudamqp>
 ```
+
+> Se você preferir usar variáveis separadas, ainda funciona. Mas em Render/Docker é mais confiável passar `DATABASE_URL` completo e `DATABASE_SSL=true`.
 
 ### Passo 3: Deploy
 

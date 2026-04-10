@@ -22,6 +22,10 @@ import { RabbitService } from "./rabbit/rabbit.service";
       username: process.env.DATABASE_USER ?? "admin",
       password: process.env.DATABASE_PASSWORD ?? "adminpassword",
       database: process.env.DATABASE_NAME ?? "order_management_db",
+      ssl:
+        process.env.DATABASE_SSL === "true"
+          ? { rejectUnauthorized: false }
+          : undefined,
       entities: [ProductEntity, CustomerEntity, OrderEntity, OrderItemEntity],
       synchronize: true,
     }),
