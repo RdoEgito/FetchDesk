@@ -28,11 +28,15 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             typeorm_1.TypeOrmModule.forRoot({
                 type: "postgres",
+                url: process.env.DATABASE_URL,
                 host: process.env.DATABASE_HOST ?? "localhost",
                 port: parseInt(process.env.DATABASE_PORT ?? "5432"),
                 username: process.env.DATABASE_USER ?? "admin",
                 password: process.env.DATABASE_PASSWORD ?? "adminpassword",
                 database: process.env.DATABASE_NAME ?? "order_management_db",
+                ssl: process.env.DATABASE_SSL === "true"
+                    ? { rejectUnauthorized: false }
+                    : undefined,
                 entities: [product_entity_1.ProductEntity, customer_entity_1.CustomerEntity, order_entity_1.OrderEntity, order_item_entity_1.OrderItemEntity],
                 synchronize: true,
             }),
