@@ -16,19 +16,29 @@ async function bootstrap() {
     next();
   });
 
+  const allowedOrigins = [
+    // Development
+    "http://localhost",
+    "http://localhost:5173",
+    "http://localhost:8080",
+    // Production
+    process.env.FRONTEND_URL,
+    "https://fetchdesk-pi.vercel.app",
+    // Legacy URLs
+    "https://your-app.vercel.app",
+    "https://rdoegito.github.io",
+    "https://fetchdesk.pages.dev",
+    "https://fetchdesk-client.onrender.com",
+  ].filter(Boolean);
+
   app.enableCors({
-    origin: [
-      // Development
-      "http://localhost",
-      "http://localhost:5173",
-      "http://localhost:8080",
-      // Production
-      process.env.FRONTEND_URL || "https://your-app.vercel.app",
-      // Legacy URLs
-      "https://rdoegito.github.io",
-      "https://fetchdesk.pages.dev",
-      "https://fetchdesk-client.onrender.com",
-    ],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS origin denied: ${origin}`));
+      }
+    },
     credentials: true,
     methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
