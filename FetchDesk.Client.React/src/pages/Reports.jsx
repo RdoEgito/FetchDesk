@@ -59,8 +59,6 @@ export default function Reports() {
     
     try {
       await navigator.clipboard.writeText(text);
-      // You could add a toast notification here if desired
-      alert('Detalhes da compra copiados para a área de transferência!');
     } catch (err) {
       console.error('Falha ao copiar: ', err);
       alert('Erro ao copiar para a área de transferência');
