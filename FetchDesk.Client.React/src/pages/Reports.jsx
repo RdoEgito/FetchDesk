@@ -124,7 +124,6 @@ export default function Reports() {
                       <tr>
                         <th></th>
                         <th>Comprador</th>
-                        <th className="text-end">Pedidos</th>
                         <th className="text-end">Receita</th>
                         <th className="text-center">Status</th>
                       </tr>
@@ -149,7 +148,6 @@ export default function Reports() {
                               <td>
                                 <strong>{buyer.buyerName}</strong>
                               </td>
-                              <td className="text-end">{buyer.orderCount}</td>
                               <td className="text-end">{formatCurrency(buyer.revenue)}</td>
                               <td className="text-center">
                                 <span className={`badge ${isPaid ? 'bg-success' : 'bg-danger'}`}>
@@ -159,11 +157,8 @@ export default function Reports() {
                             </tr>
                             {isExpanded && (
                               <tr>
-                                <td colSpan={5} className="p-3">
+                                <td colSpan={4} className="p-3">
                                   <div className="card border-0 shadow-sm">
-                                    <div className="card-header bg-light">
-                                      <h6 className="mb-0">Detalhamento de Compras - {buyer.buyerName}</h6>
-                                    </div>
                                     <div className="card-body p-0">
                                       <table className="table table-sm mb-0">
                                         <thead className="table-light">
