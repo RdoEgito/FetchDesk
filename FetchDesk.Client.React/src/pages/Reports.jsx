@@ -49,9 +49,22 @@ export default function Reports() {
     return Array.from(map.values());
   };
 
-  const getIsPaidForBuyer = (buyer) => {
-    if (!buyer.orders || buyer.orders.length === 0) return false;
-    return buyer.orders.some(order => order.isPaid);
+  const copyPurchaseDetails = async (buyer, consolidatedItems, totalAmount) => {
+    const lines = consolidatedItems.map(item => 
+      `${item.quantity} ${item.productName} - R$${item.subTotal.toFixed(2)}`
+    );
+    lines.push(`*Total - R$${totalAmount.toFixed(2)}*`);
+    
+    const text = lines.join('\n');
+    
+    try {
+      await navigator.clipboard.writeText(text);
+      // You could add a toast notification here if desired
+      alert('Detalhes da compra copiados para a área de transferência!');
+    } catch (err) {
+      console.error('Falha ao copiar: ', err);
+      alert('Erro ao copiar para a área de transferência');
+    }
   };
 
   return (
@@ -183,7 +196,16 @@ export default function Reports() {
                                     </div>
                                     <div className="card-footer bg-light p-3 d-flex justify-content-between align-items-center">
                                       <span className="text-muted fw-bold">Total:</span>
-                                      <h5 className="mb-0 fw-bold text-primary">{formatCurrency(totalAmount)}</h5>
+                                      <div className="d-flex align-items-center gap-2">
+                                        <button 
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={() => copyPurchaseDetails(buyer, consolidatedItems, totalAmount)}
+                                          title="Copiar detalhes da compra"
+                                        >
+                                          <i className="bi bi-clipboard"></i>
+                                        </button>
+                                        <h5 className="mb-0 fw-bold text-primary">{formatCurrency(totalAmount)}</h5>
+                                      </div>
                                     </div>
                                   </div>
                                 </td>
