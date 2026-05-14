@@ -43,12 +43,28 @@ export class ReportsController {
 
     const buyers = orders
       .reduce((acc, order) => {
-        const entry = acc.get(order.customerName) ?? { buyerName: order.customerName, orderCount: 0, revenue: 0 };
+        const entry = acc.get(order.customerName) ?? { 
+          buyerName: order.customerName, 
+          orderCount: 0, 
+          revenue: 0,
+          orders: [] 
+        };
         entry.orderCount += 1;
         entry.revenue += order.items?.reduce((subSum, item) => subSum + Number(item.priceAtPurchase), 0) ?? 0;
+        entry.orders.push({
+          id: order.id,
+          isPaid: order.isPaid,
+          total: order.items?.reduce((subSum, item) => subSum + Number(item.priceAtPurchase), 0) ?? 0,
+          items: order.items?.map(item => ({
+            productId: item.productId,
+            productName: item.product.name,
+            quantity: 1,
+            unitPrice: Number(item.priceAtPurchase),
+          })) ?? []
+        });
         acc.set(order.customerName, entry);
         return acc;
-      }, new Map<string, { buyerName: string; orderCount: number; revenue: number }>())
+      }, new Map<string, any>())
       .values();
 
     const buyersList = Array.from(buyers).sort((a, b) => b.revenue - a.revenue || a.buyerName.localeCompare(b.buyerName));

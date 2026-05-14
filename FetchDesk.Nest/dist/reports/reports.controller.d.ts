@@ -16,11 +16,7 @@ export declare class ReportsController {
         totalOrders: number;
         totalItems: number;
         totalRevenue: number;
-        buyers: {
-            buyerName: string;
-            orderCount: number;
-            revenue: number;
-        }[];
+        buyers: any[];
         products: {
             productId: string;
             productName: string;

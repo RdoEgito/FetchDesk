@@ -7,6 +7,7 @@ export default function Reports() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [expandedBuyer, setExpandedBuyer] = useState(null);
 
   useEffect(() => {
     const loadReport = async () => {
@@ -24,6 +25,34 @@ export default function Reports() {
 
     loadReport();
   }, [reportDate]);
+
+  const getConsolidatedItemsForBuyer = (buyer) => {
+    if (!buyer.orders) return [];
+    const map = new Map();
+    for (const order of buyer.orders) {
+      for (const item of order.items || []) {
+        const key = `${item.productId}__${item.unitPrice}__${item.productName}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            productId: item.productId,
+            productName: item.productName,
+            quantity: 0,
+            unitPrice: item.unitPrice,
+            subTotal: 0,
+          });
+        }
+        const entry = map.get(key);
+        entry.quantity += 1;
+        entry.subTotal += item.unitPrice;
+      }
+    }
+    return Array.from(map.values());
+  };
+
+  const getIsPaidForBuyer = (buyer) => {
+    if (!buyer.orders || buyer.orders.length === 0) return false;
+    return buyer.orders.some(order => order.isPaid);
+  };
 
   return (
     <div className="container py-3">
@@ -93,19 +122,81 @@ export default function Reports() {
                   <table className="table table-striped table-sm">
                     <thead>
                       <tr>
+                        <th></th>
                         <th>Comprador</th>
                         <th className="text-end">Pedidos</th>
                         <th className="text-end">Receita</th>
+                        <th className="text-center">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {report.buyers.map((buyer) => (
-                        <tr key={buyer.buyerName}>
-                          <td>{buyer.buyerName}</td>
-                          <td className="text-end">{buyer.orderCount}</td>
-                          <td className="text-end">{formatCurrency(buyer.revenue)}</td>
-                        </tr>
-                      ))}
+                      {report.buyers.map((buyer) => {
+                        const isPaid = getIsPaidForBuyer(buyer);
+                        const isExpanded = expandedBuyer === buyer.buyerName;
+                        const consolidatedItems = getConsolidatedItemsForBuyer(buyer);
+                        const totalAmount = consolidatedItems.reduce((sum, item) => sum + item.subTotal, 0);
+                        
+                        return (
+                          <tbody key={buyer.buyerName}>
+                            <tr 
+                              onClick={() => setExpandedBuyer(isExpanded ? null : buyer.buyerName)}
+                              style={{ cursor: 'pointer' }}
+                              className={isPaid ? 'table-success' : 'table-danger'}
+                            >
+                              <td style={{ width: '30px' }} className="text-center">
+                                <i className={`bi bi-chevron-${isExpanded ? 'up' : 'down'}`}></i>
+                              </td>
+                              <td>
+                                <strong>{buyer.buyerName}</strong>
+                              </td>
+                              <td className="text-end">{buyer.orderCount}</td>
+                              <td className="text-end">{formatCurrency(buyer.revenue)}</td>
+                              <td className="text-center">
+                                <span className={`badge ${isPaid ? 'bg-success' : 'bg-danger'}`}>
+                                  {isPaid ? 'Pago' : 'Não Pago'}
+                                </span>
+                              </td>
+                            </tr>
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={5} className="p-3">
+                                  <div className="card border-0 shadow-sm">
+                                    <div className="card-header bg-light">
+                                      <h6 className="mb-0">Detalhamento de Compras - {buyer.buyerName}</h6>
+                                    </div>
+                                    <div className="card-body p-0">
+                                      <table className="table table-sm mb-0">
+                                        <thead className="table-light">
+                                          <tr>
+                                            <th className="ps-3">Produto</th>
+                                            <th className="text-center">Qtd</th>
+                                            <th className="text-end">V. Unitário</th>
+                                            <th className="text-end pe-3">Subtotal</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {consolidatedItems.map((item) => (
+                                            <tr key={`${item.productId}-${item.unitPrice}`}>
+                                              <td className="ps-3">{item.productName}</td>
+                                              <td className="text-center">{item.quantity}</td>
+                                              <td className="text-end">{formatCurrency(item.unitPrice)}</td>
+                                              <td className="text-end pe-3">{formatCurrency(item.subTotal)}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                    <div className="card-footer bg-light p-3 d-flex justify-content-between align-items-center">
+                                      <span className="text-muted fw-bold">Total:</span>
+                                      <h5 className="mb-0 fw-bold text-primary">{formatCurrency(totalAmount)}</h5>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
