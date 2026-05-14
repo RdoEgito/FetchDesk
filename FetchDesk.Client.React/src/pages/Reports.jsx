@@ -181,7 +181,7 @@ export default function Reports() {
                                           <tr>
                                             <th className="ps-3">Produto</th>
                                             <th className="text-center">Qtd</th>
-                                            <th className="text-end">V. Unitário</th>
+                                            <th className="text-end">V. Unit.</th>
                                             <th className="text-end pe-3">Subtotal</th>
                                           </tr>
                                         </thead>
