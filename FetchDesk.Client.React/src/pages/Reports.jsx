@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { apiGetJson, formatCurrency } from "../api";
 
 export default function Reports() {
@@ -152,7 +152,7 @@ export default function Reports() {
                         const totalAmount = consolidatedItems.reduce((sum, item) => sum + item.subTotal, 0);
                         
                         return (
-                          <tbody key={buyer.buyerName}>
+                          <Fragment key={buyer.buyerName}>
                             <tr 
                               onClick={() => setExpandedBuyer(isExpanded ? null : buyer.buyerName)}
                               style={{ cursor: 'pointer' }}
@@ -214,7 +214,7 @@ export default function Reports() {
                                 </td>
                               </tr>
                             )}
-                          </tbody>
+                          </Fragment>
                         );
                       })}
                     </tbody>
