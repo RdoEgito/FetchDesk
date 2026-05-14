@@ -6,6 +6,7 @@ import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import OrderCreation from "./pages/OrderCreation";
 import ProductManagement from "./pages/ProductManagement";
+import Reports from "./pages/Reports";
 
 export default function App() {
   return (
@@ -22,6 +23,8 @@ export default function App() {
         <Route path="/customers" element={<CheckoutBoard />} />
         <Route path="/produtos" element={<ProductManagement />} />
         <Route path="/products" element={<ProductManagement />} />
+        <Route path="/relatorios" element={<Reports />} />
+        <Route path="/reports" element={<Reports />} />
         <Route path="/not-found" element={<NotFound />} />
         <Route path="*" element={<Navigate to="/not-found" replace />} />
       </Routes>

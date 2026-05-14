@@ -107,12 +107,20 @@ export default function NavMenu({ onCloseMobileMenu }) {
           </div>
 
           {expandAdminMenu ? (
-            <div className="nav-item px-3 ps-4">
-              <NavLink className="nav-link" to="/produtos" onClick={handleNavLinkClick}>
-                <span className="bi bi-box-seam" aria-hidden="true" style={{ marginRight: "0.75rem" }} />
-                Produtos
-              </NavLink>
-            </div>
+            <>
+              <div className="nav-item px-3 ps-4">
+                <NavLink className="nav-link" to="/produtos" onClick={handleNavLinkClick}>
+                  <span className="bi bi-box-seam" aria-hidden="true" style={{ marginRight: "0.75rem" }} />
+                  Produtos
+                </NavLink>
+              </div>
+              <div className="nav-item px-3 ps-4">
+                <NavLink className="nav-link" to="/relatorios" onClick={handleNavLinkClick}>
+                  <span className="bi bi-bar-chart-line" aria-hidden="true" style={{ marginRight: "0.75rem" }} />
+                  Relatórios
+                </NavLink>
+              </div>
+            </>
           ) : null}
         </nav>
       </div>

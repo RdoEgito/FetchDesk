@@ -8,7 +8,7 @@ const API_BASE_URL = (() => {
     throw new Error("Missing VITE_API_URL in production build");
   }
 
-  return "http://localhost:5000";
+  return "http://localhost:8080";
 })();
 
 export function getApiBaseUrl() {

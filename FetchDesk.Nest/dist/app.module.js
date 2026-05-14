@@ -17,6 +17,7 @@ const customers_controller_1 = require("./customers/customers.controller");
 const items_controller_1 = require("./items/items.controller");
 const orders_controller_1 = require("./orders/orders.controller");
 const products_controller_1 = require("./products/products.controller");
+const reports_controller_1 = require("./reports/reports.controller");
 const health_controller_1 = require("./health.controller");
 const order_gateway_1 = require("./realtime/order.gateway");
 const rabbit_service_1 = require("./rabbit/rabbit.service");
@@ -48,6 +49,7 @@ exports.AppModule = AppModule = __decorate([
             orders_controller_1.OrdersController,
             customers_controller_1.CustomersController,
             items_controller_1.ItemsController,
+            reports_controller_1.ReportsController,
         ],
         providers: [order_gateway_1.OrderGateway, rabbit_service_1.RabbitService],
     })

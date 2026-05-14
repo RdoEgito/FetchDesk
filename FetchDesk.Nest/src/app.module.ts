@@ -8,6 +8,7 @@ import { CustomersController } from "./customers/customers.controller";
 import { ItemsController } from "./items/items.controller";
 import { OrdersController } from "./orders/orders.controller";
 import { ProductsController } from "./products/products.controller";
+import { ReportsController } from "./reports/reports.controller";
 import { HealthController } from "./health.controller";
 import { OrderGateway } from "./realtime/order.gateway";
 import { RabbitService } from "./rabbit/rabbit.service";
@@ -37,6 +38,7 @@ import { RabbitService } from "./rabbit/rabbit.service";
     OrdersController,
     CustomersController,
     ItemsController,
+    ReportsController,
   ],
   providers: [OrderGateway, RabbitService],
 })
