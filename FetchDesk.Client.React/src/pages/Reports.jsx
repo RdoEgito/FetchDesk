@@ -67,6 +67,11 @@ export default function Reports() {
     }
   };
 
+  const getIsPaidForBuyer = (buyer) => {
+    if (!buyer.orders || buyer.orders.length === 0) return false;
+    return buyer.orders.some(order => order.isPaid);
+  };
+
   return (
     <div className="container py-3">
       <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between mb-4">
