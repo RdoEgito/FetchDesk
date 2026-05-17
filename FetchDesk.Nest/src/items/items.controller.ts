@@ -29,6 +29,7 @@ export class ItemsController {
         productId: item.productId,
         productName: item.product?.name ?? "",
         customerName: order.customerName,
+        orderCreatedAt: order.createdAt,
         isDelivered: item.status === ItemStatus.Delivered,
       }))
     );
