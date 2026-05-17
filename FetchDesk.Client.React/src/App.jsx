@@ -16,8 +16,11 @@ export default function App() {
         <Route path="/caixa" element={<OrderCreation />} />
         <Route path="/orders" element={<OrderCreation />} />
         <Route path="/balcao" element={<DeliveryBoard />} />
+        <Route path="/balcao/:date" element={<DeliveryBoard />} />
         <Route path="/delivery" element={<DeliveryBoard />} />
+        <Route path="/delivery/:date" element={<DeliveryBoard />} />
         <Route path="/items" element={<DeliveryBoard />} />
+        <Route path="/items/:date" element={<DeliveryBoard />} />
         <Route path="/fechamento" element={<CheckoutBoard />} />
         <Route path="/checkout" element={<CheckoutBoard />} />
         <Route path="/customers" element={<CheckoutBoard />} />

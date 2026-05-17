@@ -1,12 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import { apiFetch, apiGetJson, getApiBaseUrl } from "../api";
 import "../styles/delivery-board.css";
 
+const isValidRouteDate = (dateString) => {
+  return /^\d{4}-\d{2}-\d{2}$/.test(dateString) && !Number.isNaN(new Date(dateString).getTime());
+};
+
+const getTodayDate = () => new Date().toISOString().slice(0, 10);
+
 export default function DeliveryBoard() {
+  const params = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [hubConnection, setHubConnection] = useState(null);
   const [pendingItems, setPendingItems] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(() =>
+    params.date && isValidRouteDate(params.date) ? params.date : getTodayDate()
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
 
@@ -77,6 +90,27 @@ export default function DeliveryBoard() {
     }
   };
 
+  const basePath = location.pathname.split("/").filter(Boolean)[0] || "balcao";
+
+  useEffect(() => {
+    const currentDate = params.date && isValidRouteDate(params.date) ? params.date : getTodayDate();
+    if (params.date && params.date !== currentDate) {
+      navigate(`/${basePath}/${currentDate}`, { replace: true });
+      return;
+    }
+
+    setSelectedDate(currentDate);
+  }, [params.date, basePath, navigate]);
+
+  const handleDateChange = (event) => {
+    const nextDate = event.target.value;
+    if (!isValidRouteDate(nextDate)) {
+      return;
+    }
+    setSelectedDate(nextDate);
+    navigate(`/${basePath}/${nextDate}`);
+  };
+
   const filteredItems = useMemo(
     () => pendingItems.filter((item) => formatDate(item.orderCreatedAt) === selectedDate),
     [pendingItems, selectedDate]
@@ -141,7 +175,7 @@ export default function DeliveryBoard() {
             type="date"
             className="form-control form-control-sm"
             value={selectedDate}
-            onChange={(event) => setSelectedDate(event.target.value)}
+            onChange={handleDateChange}
           />
           <button className="btn btn-outline-secondary shadow-sm" onClick={refreshQueueAsync} disabled={isRefreshing}>
             {isRefreshing ? (
