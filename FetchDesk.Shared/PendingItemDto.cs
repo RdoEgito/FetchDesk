@@ -7,6 +7,7 @@
         public Guid ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
         public string CustomerName { get; set; } = string.Empty;
+        public DateTime OrderCreatedAt { get; set; }
         public bool IsDelivered { get; set; } = false;
     }
 }

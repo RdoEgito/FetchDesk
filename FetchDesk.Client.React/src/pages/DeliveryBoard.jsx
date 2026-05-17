@@ -6,6 +6,7 @@ import "../styles/delivery-board.css";
 export default function DeliveryBoard() {
   const [hubConnection, setHubConnection] = useState(null);
   const [pendingItems, setPendingItems] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
 
@@ -68,9 +69,22 @@ export default function DeliveryBoard() {
     }
   }
 
+  const formatDate = (dateString) => {
+    try {
+      return new Date(dateString).toISOString().slice(0, 10);
+    } catch {
+      return "";
+    }
+  };
+
+  const filteredItems = useMemo(
+    () => pendingItems.filter((item) => formatDate(item.orderCreatedAt) === selectedDate),
+    [pendingItems, selectedDate]
+  );
+
   const groupedItems = useMemo(() => {
     const map = new Map();
-    for (const item of pendingItems) {
+    for (const item of filteredItems) {
       const name = item.customerName?.trim() ? item.customerName : "Unknown Name";
       if (!map.has(name)) {
         map.set(name, []);
@@ -78,6 +92,13 @@ export default function DeliveryBoard() {
       map.get(name).push(item);
     }
     return Array.from(map.entries());
+  }, [filteredItems]);
+
+  const availableDates = useMemo(() => {
+    const dates = Array.from(
+      new Set(pendingItems.map((item) => formatDate(item.orderCreatedAt)).filter(Boolean))
+    );
+    return dates.sort((a, b) => b.localeCompare(a));
   }, [pendingItems]);
 
   useEffect(() => {
@@ -106,20 +127,35 @@ export default function DeliveryBoard() {
 
   return (
     <div className="container-fluid p-3">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2 className="mb-0">Fila de Entrega</h2>
-        <button className="btn btn-outline-secondary shadow-sm" onClick={refreshQueueAsync} disabled={isRefreshing}>
-          {isRefreshing ? (
-            <>
-              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
-              <span className="ms-1">Atualizando...</span>
-            </>
-          ) : (
-            <>
-              <i className="bi bi-arrow-clockwise me-1" /> <span>Atualizar Fila</span>
-            </>
-          )}
-        </button>
+      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-3">
+        <div>
+          <h2 className="mb-2 mb-sm-0">Fila de Entrega</h2>
+          <div className="text-muted small">Selecione a data para ver apenas os pedidos daquele dia.</div>
+        </div>
+        <div className="d-flex gap-2 align-items-center">
+          <label htmlFor="delivery-date" className="form-label mb-0">
+            Data:
+          </label>
+          <input
+            id="delivery-date"
+            type="date"
+            className="form-control form-control-sm"
+            value={selectedDate}
+            onChange={(event) => setSelectedDate(event.target.value)}
+          />
+          <button className="btn btn-outline-secondary shadow-sm" onClick={refreshQueueAsync} disabled={isRefreshing}>
+            {isRefreshing ? (
+              <>
+                <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                <span className="ms-1">Atualizando...</span>
+              </>
+            ) : (
+              <>
+                <i className="bi bi-arrow-clockwise me-1" /> <span>Atualizar Fila</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {!isConnected ? <div className="alert alert-warning shadow-sm">Conectando ao servidor em tempo real...</div> : null}
@@ -127,6 +163,13 @@ export default function DeliveryBoard() {
       {pendingItems.length === 0 ? (
         <div className="alert alert-success text-center shadow-sm fs-5">
           Nenhum item pendente no momento. Bom trabalho!
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="alert alert-info text-center shadow-sm fs-5">
+          Não há itens na fila para a data selecionada.
+          {availableDates.length > 0 ? (
+            <div className="small mt-2">Datas com histórico de pedidos: {availableDates.join(", ")}</div>
+          ) : null}
         </div>
       ) : (
         <div className={`row ${isFlashing ? "flash-update" : ""}`}>

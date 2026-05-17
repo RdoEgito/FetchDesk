@@ -4,5 +4,6 @@ export interface PendingItemDto {
   productId: string;
   productName: string;
   customerName: string;
+  orderCreatedAt: string;
   isDelivered: boolean;
 }
