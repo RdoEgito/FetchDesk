@@ -145,7 +145,11 @@ export default function DeliveryBoard() {
     });
 
     connection.on("ReceiveNewItems", (newItems) => {
-      setPendingItems((current) => [...current, ...newItems]);
+      setPendingItems((current) => {
+        const existingIds = new Set(current.map((item) => item.itemId));
+        const uniqueNewItems = newItems.filter((item) => !existingIds.has(item.itemId));
+        return uniqueNewItems.length > 0 ? [...current, ...uniqueNewItems] : current;
+      });
     });
 
     connection.on("ItemCancelled", (cancelledItemId) => {
