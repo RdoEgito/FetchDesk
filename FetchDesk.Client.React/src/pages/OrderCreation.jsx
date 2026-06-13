@@ -216,7 +216,7 @@ export default function OrderCreation() {
                         isMobileView
                           ? {
                               display: "grid",
-                              gridTemplateColumns: "40px 1fr",
+                              gridTemplateColumns: "40px 40px",
                               gridTemplateRows: "1fr 1fr",
                               gap: 0,
                               alignItems: "stretch",
@@ -228,8 +228,17 @@ export default function OrderCreation() {
                       <button
                         className="btn btn-outline-secondary px-3"
                         type="button"
+                        onClick={() => incrementQuantity(item.product.id)}
+                        style={isMobileView ? { gridRow: 1, gridColumn: 1, width: "40px", minWidth: "40px" } : undefined}
+                      >
+                        <b>+</b>
+                      </button>
+                      <button
+                        className="btn btn-outline-secondary px-3"
+                        type="button"
                         onClick={() => decrementQuantity(item.product.id)}
                         disabled={item.quantity <= 0}
+                        style={isMobileView ? { gridRow: 2, gridColumn: 1, width: "40px", minWidth: "40px" } : undefined}
                       >
                         <b>-</b>
                       </button>
@@ -238,12 +247,20 @@ export default function OrderCreation() {
                         className="form-control text-center fw-bold bg-white"
                         value={item.quantity}
                         min="0"
-                        style={{ maxWidth: "60px", gridRow: isMobileView ? "1 / span 2" : undefined }}
+                        style={
+                          isMobileView
+                            ? {
+                                gridRow: "1 / span 2",
+                                gridColumn: 2,
+                                width: "40px",
+                                minWidth: "40px",
+                                maxWidth: "40px",
+                                borderRadius: 0,
+                              }
+                            : { maxWidth: "60px" }
+                        }
                         readOnly
                       />
-                      <button className="btn btn-outline-secondary px-3" type="button" onClick={() => incrementQuantity(item.product.id)}>
-                        <b>+</b>
-                      </button>
                     </div>
                   </td>
                   <td className="text-end pe-4 fw-bold text-secondary">
