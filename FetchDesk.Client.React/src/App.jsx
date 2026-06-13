@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import MainLayout from "./layout/MainLayout";
 import CheckoutBoard from "./pages/CheckoutBoard";
 import DeliveryBoard from "./pages/DeliveryBoard";
@@ -9,6 +10,23 @@ import ProductManagement from "./pages/ProductManagement";
 import Reports from "./pages/Reports";
 
 export default function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    let page = "Página";
+
+    if (path === "/") page = "Início";
+    else if (path.startsWith("/caixa") || path.startsWith("/orders")) page = "Caixa";
+    else if (path.startsWith("/balcao") || path.startsWith("/delivery") || path.startsWith("/items")) page = "Balcão";
+    else if (path.startsWith("/fechamento") || path.startsWith("/checkout") || path.startsWith("/customers")) page = "Fechamento";
+    else if (path.startsWith("/produtos") || path.startsWith("/products")) page = "Produtos";
+    else if (path.startsWith("/relatorios") || path.startsWith("/reports")) page = "Relatórios";
+    else if (path === "/not-found") page = "Não encontrado";
+
+    document.title = `Cantina - ${page}`;
+  }, [location.pathname]);
+
   return (
     <MainLayout>
       <Routes>
