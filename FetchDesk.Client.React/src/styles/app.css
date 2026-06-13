@@ -71,14 +71,14 @@ a,
     grid-row: 1;
     grid-column: 1;
     border-top-left-radius: 0.375rem;
-    border-bottom-color: transparent;
+    border-bottom: 1px solid #ced4da;
   }
 
   .caixa-menu-table td .input-group > button:last-of-type,
   .caixa-menu-table td .input-group > .btn:last-of-type {
     grid-row: 2;
     grid-column: 1;
-    border-top-color: transparent;
+    border-top: 0;
     border-bottom-left-radius: 0.375rem;
   }
 
@@ -86,7 +86,7 @@ a,
     grid-row: 1 / span 2;
     grid-column: 2;
     border: 1px solid #ced4da;
-    border-left: 1px solid #ced4da;
+    border-left: 0;
     border-top-right-radius: 0.375rem;
     border-bottom-right-radius: 0.375rem;
     border-top-left-radius: 0;
