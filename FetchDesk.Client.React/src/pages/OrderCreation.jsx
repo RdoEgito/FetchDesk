@@ -10,6 +10,7 @@ export default function OrderCreation() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [existingTabTotal, setExistingTabTotal] = useState(0);
+  const [isMobileView, setIsMobileView] = useState(typeof window !== 'undefined' && window.innerWidth <= 640);
 
   const totalSelectedItems = useMemo(
     () => productSelections.reduce((sum, p) => sum + p.quantity, 0),
@@ -127,6 +128,12 @@ export default function OrderCreation() {
     loadCustomersAsync();
   }, []);
 
+  useEffect(() => {
+    const onResize = () => setIsMobileView(window.innerWidth <= 640);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   return (
     <div className="container-fluid p-3">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -203,7 +210,21 @@ export default function OrderCreation() {
                     <span className="text-muted">{formatCurrency(item.product.currentPrice)}</span>
                   </td>
                   <td>
-                    <div className="input-group justify-content-center">
+                    <div
+                      className={`input-group justify-content-center${isMobileView ? " mobile-qty-grid" : ""}`}
+                      style={
+                        isMobileView
+                          ? {
+                              display: "grid",
+                              gridTemplateColumns: "40px 1fr",
+                              gridTemplateRows: "1fr 1fr",
+                              gap: 0,
+                              alignItems: "stretch",
+                              width: "fit-content",
+                            }
+                          : undefined
+                      }
+                    >
                       <button
                         className="btn btn-outline-secondary px-3"
                         type="button"
@@ -217,7 +238,7 @@ export default function OrderCreation() {
                         className="form-control text-center fw-bold bg-white"
                         value={item.quantity}
                         min="0"
-                        style={{ maxWidth: "60px" }}
+                        style={{ maxWidth: "60px", gridRow: isMobileView ? "1 / span 2" : undefined }}
                         readOnly
                       />
                       <button className="btn btn-outline-secondary px-3" type="button" onClick={() => incrementQuantity(item.product.id)}>
