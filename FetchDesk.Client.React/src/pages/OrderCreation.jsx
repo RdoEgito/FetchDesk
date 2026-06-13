@@ -229,7 +229,20 @@ export default function OrderCreation() {
                         className="btn btn-outline-secondary px-3"
                         type="button"
                         onClick={() => incrementQuantity(item.product.id)}
-                        style={isMobileView ? { gridRow: 1, gridColumn: 1, width: "40px", minWidth: "40px" } : undefined}
+                        style={
+                          isMobileView
+                            ? {
+                                gridRow: 1,
+                                gridColumn: 1,
+                                width: "40px",
+                                minWidth: "40px",
+                                borderTopLeftRadius: "0.375rem",
+                                borderTopRightRadius: 0,
+                                borderBottomRightRadius: 0,
+                                borderBottomLeftRadius: 0,
+                              }
+                            : undefined
+                        }
                       >
                         <b>+</b>
                       </button>
@@ -238,7 +251,20 @@ export default function OrderCreation() {
                         type="button"
                         onClick={() => decrementQuantity(item.product.id)}
                         disabled={item.quantity <= 0}
-                        style={isMobileView ? { gridRow: 2, gridColumn: 1, width: "40px", minWidth: "40px" } : undefined}
+                        style={
+                          isMobileView
+                            ? {
+                                gridRow: 2,
+                                gridColumn: 1,
+                                width: "40px",
+                                minWidth: "40px",
+                                borderBottomLeftRadius: "0.375rem",
+                                borderTopLeftRadius: 0,
+                                borderTopRightRadius: 0,
+                                borderBottomRightRadius: 0,
+                              }
+                            : undefined
+                        }
                       >
                         <b>-</b>
                       </button>
@@ -255,7 +281,11 @@ export default function OrderCreation() {
                                 width: "40px",
                                 minWidth: "40px",
                                 maxWidth: "40px",
-                                borderRadius: 0,
+                                borderTopRightRadius: "0.375rem",
+                                borderBottomRightRadius: "0.375rem",
+                                borderTopLeftRadius: 0,
+                                borderBottomLeftRadius: 0,
+                                borderLeft: "1px solid #ced4da",
                               }
                             : { maxWidth: "60px" }
                         }
