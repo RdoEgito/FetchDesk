@@ -29,3 +29,17 @@ a,
 .content {
   padding-top: 1.1rem;
 }
+
+@media (max-width: 640px) {
+  /* Mobile-only: reduce Subtotal column width in /caixa (Cardápio) */
+  .caixa-menu-table thead th.text-end.pe-4,
+  .caixa-menu-table tbody td.text-end.pe-4 {
+    width: 120px !important;
+    max-width: 120px !important;
+  }
+
+  /* Slightly tighten spacing inside the quantity input group on mobile */
+  .caixa-menu-table td .input-group {
+    gap: 0.5rem;
+  }
+}

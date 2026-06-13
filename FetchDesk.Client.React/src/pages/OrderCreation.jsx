@@ -175,7 +175,7 @@ export default function OrderCreation() {
           <h5 className="mb-0 mt-1">Cardápio</h5>
         </div>
         <div className="card-body p-0">
-          <table className="table table-hover align-middle mb-0">
+          <table className="table table-hover align-middle mb-0 caixa-menu-table">
             <thead className="table-light">
               <tr>
                 <th className="ps-3">Produto</th>
