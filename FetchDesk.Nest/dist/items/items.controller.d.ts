@@ -12,6 +12,7 @@ export declare class ItemsController {
             productId: string;
             productName: string;
             customerName: string;
+            orderCreatedAt: Date;
             isDelivered: boolean;
         }[];
     }>;

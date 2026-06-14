@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "nest start --watch",
     "build": "nest build",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",
@@ -28,7 +29,10 @@
     "@nestjs/testing": "^11.1.6",
     "@types/amqplib": "^0.10.8",
     "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.17.2",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.3.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }

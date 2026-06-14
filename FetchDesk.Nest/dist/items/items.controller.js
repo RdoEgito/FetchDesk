@@ -38,6 +38,7 @@ let ItemsController = class ItemsController {
             productId: item.productId,
             productName: item.product?.name ?? "",
             customerName: order.customerName,
+            orderCreatedAt: order.createdAt,
             isDelivered: item.status === item_status_enum_1.ItemStatus.Delivered,
         })));
         return { ordersItems };

@@ -7,8 +7,12 @@ export declare class RabbitService implements OnModuleInit, OnModuleDestroy {
     private connection;
     private channel;
     private readonly queueName;
+    private reconnectPromise;
     constructor(gateway: OrderGateway);
     onModuleInit(): Promise<void>;
+    private isChannelUsable;
+    private connectRabbit;
+    private fallbackToRealtime;
     publishOrderPlaced(event: OrderPlacedEvent): Promise<void>;
     onModuleDestroy(): Promise<void>;
 }
