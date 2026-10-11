@@ -12,7 +12,7 @@ export default function CheckoutBoard() {
   const [isSavingObservation, setIsSavingObservation] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [isPaidCustomersExpanded, setIsPaidCustomersExpanded] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [paymentMethod, setPaymentMethod] = useState("card");
   const [splitCashAmount, setSplitCashAmount] = useState("");
 
   const activeCustomers = openCustomers.filter((customer) => customer.isTabOpen);
@@ -30,7 +30,7 @@ export default function CheckoutBoard() {
 
   async function selectCustomer(customerId) {
     setSelectedCustomerId(customerId);
-    setPaymentMethod("cash");
+    setPaymentMethod("card");
     setSplitCashAmount("");
     setIsLoadingTab(true);
     setFeedbackMessage("");
@@ -386,8 +386,8 @@ export default function CheckoutBoard() {
                       <legend className="fs-6 fw-bold">Forma de pagamento</legend>
                       <div className="d-flex flex-wrap gap-3">
                         {[
-                          ["cash", "Dinheiro", "bi-cash-stack"],
                           ["card", "Maquineta", "bi-credit-card"],
+                          ["cash", "Dinheiro", "bi-cash-stack"],
                           ["split", "Dividido", "bi-arrow-left-right"],
                         ].map(([value, label, icon]) => (
                           <div className="form-check" key={value}>
