@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, apiGetJson, formatCurrency } from "../api";
+
+const parseAmountCents = (value) => {
+  const amount = Number(String(value).trim().replace(",", "."));
+  return Number.isFinite(amount) ? Math.round(amount * 100) : Number.NaN;
+};
 
 export default function CheckoutBoard() {
   const navigate = useNavigate();
@@ -16,9 +21,17 @@ export default function CheckoutBoard() {
   const [isPaidCustomersExpanded, setIsPaidCustomersExpanded] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [splitCashAmount, setSplitCashAmount] = useState("");
+  const splitCashInputRef = useRef(null);
 
   const activeCustomers = openCustomers.filter((customer) => customer.isTabOpen);
   const paidCustomers = openCustomers.filter((customer) => !customer.isTabOpen);
+
+  useEffect(() => {
+    if (paymentMethod === "split" && splitCashInputRef.current) {
+      splitCashInputRef.current.focus();
+      splitCashInputRef.current.select();
+    }
+  }, [paymentMethod]);
 
   async function loadOpenCustomersAsync() {
     try {
@@ -97,7 +110,7 @@ export default function CheckoutBoard() {
   async function closeTab() {
     if (!selectedCustomerId) return;
     const totalCents = Math.round(Number(currentTab?.totalAmount ?? 0) * 100);
-    const splitCashCents = Math.round(Number(splitCashAmount) * 100);
+    const splitCashCents = parseAmountCents(splitCashAmount);
     const cashCents = paymentMethod === "cash"
       ? totalCents
       : paymentMethod === "split"
@@ -242,7 +255,7 @@ export default function CheckoutBoard() {
 
   const paidTodayTotal = paidTodayItems.reduce((sum, item) => sum + item.subTotal, 0);
   const totalDueCents = Math.round(Number(currentTab?.totalAmount ?? 0) * 100);
-  const splitCashCents = Math.round(Number(splitCashAmount) * 100);
+  const splitCashCents = parseAmountCents(splitCashAmount);
   const isSplitPaymentValid =
     paymentMethod !== "split" ||
     (Number.isFinite(splitCashCents) && splitCashCents > 0 && splitCashCents < totalDueCents);
@@ -467,12 +480,11 @@ export default function CheckoutBoard() {
                               Valor em dinheiro
                             </label>
                             <input
+                              ref={splitCashInputRef}
                               id="split-cash-amount"
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
                               className="form-control"
-                              min="0.01"
-                              max={Math.max(0, (totalDueCents - 1) / 100).toFixed(2)}
-                              step="0.01"
                               value={splitCashAmount}
                               onChange={(event) => setSplitCashAmount(event.target.value)}
                               aria-invalid={!isSplitPaymentValid}
