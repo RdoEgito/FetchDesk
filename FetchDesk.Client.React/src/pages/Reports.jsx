@@ -366,6 +366,7 @@ export default function Reports() {
                         <th>Comprador</th>
                         <th className="text-end">Receita</th>
                         <th className="text-center">Status</th>
+                        <th className="text-center">Pagamento no período</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -374,6 +375,8 @@ export default function Reports() {
                         const isExpanded = expandedBuyer === buyer.buyerName;
                         const consolidatedItems = getConsolidatedItemsForBuyer(buyer);
                         const totalAmount = consolidatedItems.reduce((sum, item) => sum + item.subTotal, 0);
+                        const cashAmount = Number(buyer.payments?.cashAmount ?? 0);
+                        const cardAmount = Number(buyer.payments?.cardAmount ?? 0);
                         
                         return (
                           <Fragment key={buyer.buyerName}>
@@ -394,10 +397,26 @@ export default function Reports() {
                                   {isPaid ? 'Pago' : 'Não Pago'}
                                 </span>
                               </td>
+                              <td className="text-center small">
+                                {cashAmount > 0 || cardAmount > 0 ? (
+                                  <div>
+                                    {cashAmount > 0 && (
+                                      <div>Dinheiro: {formatCurrency(cashAmount)}</div>
+                                    )}
+                                    {cardAmount > 0 && (
+                                      <div>Maquineta: {formatCurrency(cardAmount)}</div>
+                                    )}
+                                  </div>
+                                ) : isPaid ? (
+                                  <span className="text-muted">Não informada</span>
+                                ) : (
+                                  <span className="text-muted">—</span>
+                                )}
+                              </td>
                             </tr>
                             {isExpanded && (
                               <tr>
-                                <td colSpan={4} className="p-3">
+                                <td colSpan={5} className="p-3">
                                   <div className="card border-0 shadow-sm">
                                     <div className="card-body p-0">
                                       <table className="table table-sm mb-0">

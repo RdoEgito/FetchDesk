@@ -1,6 +1,7 @@
 import { Controller, Get, Query } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { And, LessThan, MoreThanOrEqual, Repository } from "typeorm";
+import { And, In, LessThan, MoreThanOrEqual, Repository } from "typeorm";
+import { CustomerPaymentEntity } from "../entities/customer-payment.entity";
 import { OrderEntity } from "../entities/order.entity";
 
 const parseDate = (value: string) => {
@@ -17,7 +18,9 @@ const parseDate = (value: string) => {
 @Controller("reports")
 export class ReportsController {
   constructor(
-    @InjectRepository(OrderEntity) private readonly orders: Repository<OrderEntity>
+    @InjectRepository(OrderEntity) private readonly orders: Repository<OrderEntity>,
+    @InjectRepository(CustomerPaymentEntity)
+    private readonly customerPayments: Repository<CustomerPaymentEntity>
   ) {}
 
   @Get("daily")
@@ -59,6 +62,30 @@ export class ReportsController {
       },
     });
 
+    const customerIds = Array.from(new Set(orders.map((order) => order.customerId)));
+    const paymentTotalsByCustomer = new Map<
+      string,
+      { cashAmount: number; cardAmount: number }
+    >();
+    if (customerIds.length > 0) {
+      const payments = await this.customerPayments.find({
+        where: {
+          customerId: In(customerIds),
+          paidAt: And(MoreThanOrEqual(startDate), LessThan(endExclusive)),
+        },
+      });
+
+      for (const payment of payments) {
+        const totals = paymentTotalsByCustomer.get(payment.customerId) ?? {
+          cashAmount: 0,
+          cardAmount: 0,
+        };
+        totals.cashAmount += Number(payment.cashAmount);
+        totals.cardAmount += Number(payment.cardAmount);
+        paymentTotalsByCustomer.set(payment.customerId, totals);
+      }
+    }
+
     const items = orders.flatMap((order) => order.items || []);
     const totalRevenue = items.reduce((sum, item) => sum + Number(item.priceAtPurchase), 0);
     const totalOrders = orders.length;
@@ -66,10 +93,15 @@ export class ReportsController {
 
     const buyers = orders
       .reduce((acc, order) => {
-        const entry = acc.get(order.customerName) ?? { 
+        const entry = acc.get(order.customerId) ?? {
+          customerId: order.customerId,
           buyerName: order.customerName, 
           orderCount: 0, 
           revenue: 0,
+          payments: paymentTotalsByCustomer.get(order.customerId) ?? {
+            cashAmount: 0,
+            cardAmount: 0,
+          },
           orders: [] 
         };
         entry.orderCount += 1;
@@ -85,12 +117,14 @@ export class ReportsController {
             unitPrice: Number(item.priceAtPurchase),
           })) ?? []
         });
-        acc.set(order.customerName, entry);
+        acc.set(order.customerId, entry);
         return acc;
       }, new Map<string, any>())
       .values();
 
-    const buyersList = Array.from(buyers).sort((a, b) => b.revenue - a.revenue || a.buyerName.localeCompare(b.buyerName));
+    const buyersList = Array.from(buyers)
+      .map(({ customerId, ...buyer }) => buyer)
+      .sort((a, b) => b.revenue - a.revenue || a.buyerName.localeCompare(b.buyerName));
 
     const products = items
       .reduce((acc, item) => {
