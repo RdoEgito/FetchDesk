@@ -11,6 +11,8 @@ export default function CheckoutBoard() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isSavingObservation, setIsSavingObservation] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [returnItemError, setReturnItemError] = useState("");
+  const [returningItemId, setReturningItemId] = useState(null);
   const [isPaidCustomersExpanded, setIsPaidCustomersExpanded] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [splitCashAmount, setSplitCashAmount] = useState("");
@@ -34,6 +36,7 @@ export default function CheckoutBoard() {
     setSplitCashAmount("");
     setIsLoadingTab(true);
     setFeedbackMessage("");
+    setReturnItemError("");
     setCurrentTab(null);
     try {
       const tab = await apiGetJson(`/customers/${customerId}/tab`);
@@ -45,17 +48,49 @@ export default function CheckoutBoard() {
     }
   }
 
-  async function returnItemAsync(productId) {
+  async function returnItemAsync(itemId) {
     if (!selectedCustomerId) return;
+    setReturningItemId(itemId);
+    setReturnItemError("");
     try {
-      const response = await apiFetch(`/customers/${selectedCustomerId}/items/${productId}`, { method: "DELETE" });
+      const response = await apiFetch(
+        `/customers/${selectedCustomerId}/items/${itemId}`,
+        { method: "DELETE" }
+      );
       if (response.ok) {
         await selectCustomer(selectedCustomerId);
       } else {
-        setFeedbackMessage("Não foi possível devolver o item. Ele pode já ter sido entregue no balcão.");
+        let detail = "";
+        try {
+          const body = await response.json();
+          detail = Array.isArray(body.message)
+            ? body.message.join(" ")
+            : body.message || body.error || "";
+        } catch {
+          detail = "";
+        }
+
+        const errorMessage = [
+          `Não foi possível remover o item (HTTP ${response.status}).`,
+          detail,
+        ]
+          .filter(Boolean)
+          .join(" ");
+        setReturnItemError(errorMessage);
+
+        try {
+          const tab = await apiGetJson(`/customers/${selectedCustomerId}/tab`);
+          setCurrentTab(tab);
+        } catch (refreshError) {
+          setReturnItemError(
+            `${errorMessage} Também não foi possível atualizar a conta: ${refreshError.message}`
+          );
+        }
       }
     } catch (error) {
-      setFeedbackMessage(`Erro de conexão: ${error.message}`);
+      setReturnItemError(`Erro ao remover o item: ${error.message}`);
+    } finally {
+      setReturningItemId(null);
     }
   }
 
@@ -161,14 +196,16 @@ export default function CheckoutBoard() {
             productName,
             quantity: 0,
             cancellableQuantity: 0,
+            cancellableItemIds: [],
             unitPrice: unitPrice,
             subTotal: 0,
           });
         }
         const entry = map.get(key);
         entry.quantity += 1;
-        if (!item.isDelivered) {
+        if (item.status === "Pending") {
           entry.cancellableQuantity += 1;
+          entry.cancellableItemIds.push(item.id);
         }
         entry.subTotal += unitPrice;
       }
@@ -337,9 +374,18 @@ export default function CheckoutBoard() {
                                   <button
                                     className="btn btn-sm btn-outline-danger py-0 px-2"
                                     title="Devolver item"
-                                    onClick={() => returnItemAsync(item.productId)}
+                                    onClick={() => returnItemAsync(item.cancellableItemIds[0])}
+                                    disabled={returningItemId !== null}
                                   >
-                                    <i className="bi bi-dash" />
+                                    {returningItemId === item.cancellableItemIds[0] ? (
+                                      <span
+                                        className="spinner-border spinner-border-sm"
+                                        role="status"
+                                        aria-label="Removendo item"
+                                      />
+                                    ) : (
+                                      <i className="bi bi-dash" />
+                                    )}
                                   </button>
                                 ) : null}
                                 <span className="fs-5">{item.quantity}</span>
@@ -478,6 +524,17 @@ export default function CheckoutBoard() {
                   )}
                 </div>
               </div>
+              {returnItemError && (
+                <div className="alert alert-danger alert-dismissible mt-3" role="alert">
+                  <strong>Erro ao remover item:</strong> {returnItemError}
+                  <button
+                    type="button"
+                    className="btn-close"
+                    aria-label="Fechar mensagem de erro"
+                    onClick={() => setReturnItemError("")}
+                  />
+                </div>
+              )}
               {paidTodayItems.length > 0 && (
                 <section className="card shadow-sm border-0 mt-4">
                   <div className="card-header bg-light">

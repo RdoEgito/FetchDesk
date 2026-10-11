@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  ConflictException,
   NotFoundException,
   Param,
   Patch,
@@ -181,30 +182,42 @@ export class CustomersController {
     });
   }
 
-  @Delete(":customerId/items/:productId")
+  @Delete(":customerId/items/:itemId")
   async deleteItemFromTab(
     @Param("customerId") customerId: string,
-    @Param("productId") productId: string
+    @Param("itemId") itemId: string
   ) {
-    const openOrders = await this.orders.find({
-      where: { customerId, isPaid: false },
-      relations: { items: true },
+    const cancelledItemId = await this.dataSource.transaction(async (manager) => {
+      const itemToRemove = await manager
+        .createQueryBuilder(OrderItemEntity, "item")
+        .innerJoin("item.order", "order")
+        .where("order.customerId = :customerId", { customerId })
+        .andWhere("order.isPaid = :isPaid", { isPaid: false })
+        .andWhere("item.id = :itemId", { itemId })
+        .andWhere("item.status = :status", { status: ItemStatus.Pending })
+        .setLock("pessimistic_write")
+        .getOne();
+
+      if (!itemToRemove) {
+        const matchingItem = await manager
+          .createQueryBuilder(OrderItemEntity, "item")
+          .innerJoin("item.order", "order")
+          .where("order.customerId = :customerId", { customerId })
+          .andWhere("item.id = :itemId", { itemId })
+          .getOne();
+
+        if (!matchingItem) {
+          throw new NotFoundException("O item selecionado não foi encontrado na conta.");
+        }
+        throw new ConflictException(
+          "Não há item pendente para devolver. O item pode já ter sido entregue ou pago."
+        );
+      }
+
+      await manager.remove(itemToRemove);
+      return itemToRemove.id;
     });
 
-    let itemToRemove: OrderItemEntity | null = null;
-    for (const order of openOrders) {
-      itemToRemove =
-        order.items?.find((item) => item.productId === productId && item.status !== ItemStatus.Delivered) ??
-        null;
-      if (itemToRemove) break;
-    }
-
-    if (!itemToRemove) {
-      return { message: "Item not found or already delivered." };
-    }
-
-    const cancelledItemId = itemToRemove.id;
-    await this.orderItems.remove(itemToRemove);
     this.gateway.sendItemCancelled(cancelledItemId);
 
     return { message: "Item removed from tab successfully." };
