@@ -1,7 +1,18 @@
 import { Controller, Get, Query } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Between, Repository } from "typeorm";
+import { And, LessThan, MoreThanOrEqual, Repository } from "typeorm";
 import { OrderEntity } from "../entities/order.entity";
+
+const parseDate = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value
+    ? null
+    : date;
+};
 
 @Controller("reports")
 export class ReportsController {
@@ -10,24 +21,36 @@ export class ReportsController {
   ) {}
 
   @Get("daily")
-  async getDailyReport(@Query("date") date?: string) {
-    const reportDate = date
-      ? new Date(`${date}T00:00:00.000Z`)
-      : new Date();
+  async getDailyReport(
+    @Query("date") date?: string,
+    @Query("startDate") startDateValue?: string,
+    @Query("endDate") endDateValue?: string
+  ) {
+    const startDate = startDateValue
+      ? parseDate(startDateValue)
+      : date
+        ? parseDate(date)
+        : parseDate(new Date().toISOString().slice(0, 10));
+    const endDate = endDateValue ? parseDate(endDateValue) : startDate;
 
-    if (isNaN(reportDate.getTime())) {
+    if (!startDate || !endDate) {
       return {
         message: "Data inválida. Use o formato yyyy-MM-dd.",
       };
     }
 
-    const startDate = new Date(Date.UTC(reportDate.getUTCFullYear(), reportDate.getUTCMonth(), reportDate.getUTCDate()));
-    const endDate = new Date(startDate);
-    endDate.setUTCDate(endDate.getUTCDate() + 1);
+    if (endDate < startDate) {
+      return {
+        message: "A data final deve ser igual ou posterior à data inicial.",
+      };
+    }
+
+    const endExclusive = new Date(endDate);
+    endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
 
     const orders = await this.orders.find({
       where: {
-        createdAt: Between(startDate, endDate),
+        createdAt: And(MoreThanOrEqual(startDate), LessThan(endExclusive)),
       },
       relations: {
         items: {
@@ -94,6 +117,33 @@ export class ReportsController {
       totalRevenue,
       buyers: buyersList,
       products: productsList,
+    };
+  }
+
+  @Get("dates")
+  async getDatesWithOrders(@Query("month") month?: string) {
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return { message: "Mês inválido. Use o formato yyyy-MM." };
+    }
+
+    const monthStart = parseDate(`${month}-01`);
+    if (!monthStart) {
+      return { message: "Mês inválido. Use o formato yyyy-MM." };
+    }
+
+    const nextMonth = new Date(monthStart);
+    nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+    const orders = await this.orders.find({
+      select: { createdAt: true },
+      where: {
+        createdAt: And(MoreThanOrEqual(monthStart), LessThan(nextMonth)),
+      },
+    });
+
+    return {
+      dates: Array.from(
+        new Set(orders.map((order) => order.createdAt.toISOString().slice(0, 10)))
+      ).sort(),
     };
   }
 }

@@ -1,0 +1,82 @@
+.report-period {
+  width: min(100%, 330px);
+}
+
+.report-calendar {
+  width: 100%;
+}
+
+.report-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.report-calendar-weekday,
+.report-calendar-empty,
+.report-calendar-day {
+  display: flex;
+  min-width: 0;
+  aspect-ratio: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-calendar-weekday {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.report-calendar-day {
+  position: relative;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+}
+
+.report-calendar-day:hover {
+  background-color: #e9ecef;
+}
+
+.report-calendar-day.is-in-range {
+  border-radius: 0;
+  background-color: #e7f1ff;
+}
+
+.report-calendar-day.is-selected,
+.report-calendar-day.is-selected:hover {
+  border-radius: 50%;
+  background-color: #0d6efd;
+  color: #fff;
+}
+
+.report-calendar-day.is-today:not(.is-selected) {
+  outline: 1px solid #0d6efd;
+}
+
+.report-calendar-day.has-orders::after,
+.report-calendar-legend-dot {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background-color: #198754;
+}
+
+.report-calendar-day.has-orders::after {
+  position: absolute;
+  bottom: 0.15rem;
+  content: "";
+}
+
+.report-calendar-day.is-selected.has-orders::after {
+  background-color: #fff;
+}
+
+.report-calendar-legend-dot {
+  display: inline-block;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
