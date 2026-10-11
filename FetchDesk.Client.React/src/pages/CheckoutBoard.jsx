@@ -10,6 +10,10 @@ export default function CheckoutBoard() {
   const [isLoadingTab, setIsLoadingTab] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [isPaidCustomersExpanded, setIsPaidCustomersExpanded] = useState(false);
+
+  const activeCustomers = openCustomers.filter((customer) => customer.isTabOpen);
+  const paidCustomers = openCustomers.filter((customer) => !customer.isTabOpen);
 
   async function loadOpenCustomersAsync() {
     try {
@@ -63,6 +67,7 @@ export default function CheckoutBoard() {
             customer.id === selectedCustomerId ? { ...customer, isTabOpen: false } : customer
           )
         );
+        setIsPaidCustomersExpanded(true);
         setFeedbackMessage("Pagamento recebido com sucesso!");
       } else {
         setFeedbackMessage("Erro ao processar o fechamento da conta.");
@@ -122,23 +127,70 @@ export default function CheckoutBoard() {
             <div className="card-header bg-dark text-white">
               <h5 className="mb-0">Contas de Clientes</h5>
             </div>
-            <div className="list-group list-group-flush">
-              {openCustomers.length === 0 ? (
-                <div className="p-4 text-center text-muted">Nenhuma conta registrada.</div>
-              ) : (
-                openCustomers.map((customer) => (
-                  <button
-                    key={customer.id}
-                    type="button"
-                    className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${
-                      customer.id === selectedCustomerId ? "active" : ""
-                    } ${!customer.isTabOpen ? "opacity-50 bg-light" : ""}`}
-                    onClick={() => selectCustomer(customer.id)}
-                  >
-                    <strong>{customer.name}</strong>
-                    {!customer.isTabOpen ? <span className="badge bg-success rounded-pill">Pago</span> : null}
-                  </button>
-                ))
+            <div className="border-bottom">
+              <div className="px-3 py-2 bg-light">
+                <strong>Contas em aberto</strong>
+                <span className="badge bg-primary rounded-pill ms-2">{activeCustomers.length}</span>
+              </div>
+              <div className="list-group list-group-flush">
+                {activeCustomers.length === 0 ? (
+                  <div className="px-3 py-3 text-center text-muted">Nenhuma conta em aberto.</div>
+                ) : (
+                  activeCustomers.map((customer) => (
+                    <button
+                      key={customer.id}
+                      type="button"
+                      className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${
+                        customer.id === selectedCustomerId ? "active" : ""
+                      }`}
+                      onClick={() => selectCustomer(customer.id)}
+                    >
+                      <strong>{customer.name}</strong>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+            <div>
+              <button
+                type="button"
+                className="list-group-item list-group-item-action d-flex justify-content-between align-items-center w-100 border-0 rounded-0"
+                aria-expanded={isPaidCustomersExpanded}
+                onClick={() => setIsPaidCustomersExpanded((expanded) => !expanded)}
+              >
+                <strong>Contas pagas</strong>
+                <span className="d-flex align-items-center gap-2">
+                  <span className="badge bg-success rounded-pill">{paidCustomers.length}</span>
+                  <i
+                    className={`bi ${
+                      isPaidCustomersExpanded ? "bi-caret-down-fill" : "bi-caret-right-fill"
+                    }`}
+                    aria-hidden="true"
+                  />
+                </span>
+              </button>
+              {isPaidCustomersExpanded && (
+                <div className="list-group list-group-flush">
+                  {paidCustomers.length === 0 ? (
+                    <div className="px-3 py-3 text-center text-muted">Nenhuma conta paga.</div>
+                  ) : (
+                    paidCustomers.map((customer) => (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${
+                          customer.id === selectedCustomerId ? "active" : ""
+                        } ${customer.id !== selectedCustomerId ? "opacity-50 bg-light" : ""}`}
+                        onClick={() => selectCustomer(customer.id)}
+                      >
+                        <strong>{customer.name}</strong>
+                        <span className={`badge rounded-pill ${
+                          customer.id === selectedCustomerId ? "bg-light text-success" : "bg-success"
+                        }`}>Pago</span>
+                      </button>
+                    ))
+                  )}
+                </div>
               )}
             </div>
           </div>
