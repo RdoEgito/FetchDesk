@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { CustomerEntity } from "./entities/customer.entity";
+import { CustomerPaymentEntity } from "./entities/customer-payment.entity";
 import { OrderItemEntity } from "./entities/order-item.entity";
 import { OrderEntity } from "./entities/order.entity";
 import { ProductEntity } from "./entities/product.entity";
@@ -27,10 +28,16 @@ import { RabbitService } from "./rabbit/rabbit.service";
         process.env.DATABASE_SSL === "true"
           ? { rejectUnauthorized: false }
           : undefined,
-      entities: [ProductEntity, CustomerEntity, OrderEntity, OrderItemEntity],
+      entities: [ProductEntity, CustomerEntity, CustomerPaymentEntity, OrderEntity, OrderItemEntity],
       synchronize: true,
     }),
-    TypeOrmModule.forFeature([ProductEntity, CustomerEntity, OrderEntity, OrderItemEntity]),
+    TypeOrmModule.forFeature([
+      ProductEntity,
+      CustomerEntity,
+      CustomerPaymentEntity,
+      OrderEntity,
+      OrderItemEntity,
+    ]),
   ],
   controllers: [
     HealthController,

@@ -11,6 +11,8 @@ export default function CheckoutBoard() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [isPaidCustomersExpanded, setIsPaidCustomersExpanded] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [splitCashAmount, setSplitCashAmount] = useState("");
 
   const activeCustomers = openCustomers.filter((customer) => customer.isTabOpen);
   const paidCustomers = openCustomers.filter((customer) => !customer.isTabOpen);
@@ -27,6 +29,8 @@ export default function CheckoutBoard() {
 
   async function selectCustomer(customerId) {
     setSelectedCustomerId(customerId);
+    setPaymentMethod("cash");
+    setSplitCashAmount("");
     setIsLoadingTab(true);
     setFeedbackMessage("");
     setCurrentTab(null);
@@ -56,10 +60,25 @@ export default function CheckoutBoard() {
 
   async function closeTab() {
     if (!selectedCustomerId) return;
+    const totalCents = Math.round(Number(currentTab?.totalAmount ?? 0) * 100);
+    const splitCashCents = Math.round(Number(splitCashAmount) * 100);
+    const cashCents = paymentMethod === "cash"
+      ? totalCents
+      : paymentMethod === "split"
+        ? splitCashCents
+        : 0;
+    const cardCents = paymentMethod === "card" ? totalCents : totalCents - cashCents;
+
     setIsProcessingPayment(true);
     setFeedbackMessage("");
     try {
-      const response = await apiFetch(`/customers/${selectedCustomerId}/close-tab`, { method: "PATCH" });
+      const response = await apiFetch(`/customers/${selectedCustomerId}/close-tab`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          cashAmount: cashCents / 100,
+          cardAmount: cardCents / 100,
+        }),
+      });
       if (response.ok) {
         const today = new Date().toISOString().slice(0, 10);
         setCurrentTab((tab) => {
@@ -155,6 +174,11 @@ export default function CheckoutBoard() {
   }, [currentTab]);
 
   const paidTodayTotal = paidTodayItems.reduce((sum, item) => sum + item.subTotal, 0);
+  const totalDueCents = Math.round(Number(currentTab?.totalAmount ?? 0) * 100);
+  const splitCashCents = Math.round(Number(splitCashAmount) * 100);
+  const isSplitPaymentValid =
+    paymentMethod !== "split" ||
+    (Number.isFinite(splitCashCents) && splitCashCents > 0 && splitCashCents < totalDueCents);
 
   useEffect(() => {
     loadOpenCustomersAsync();
@@ -299,6 +323,76 @@ export default function CheckoutBoard() {
                     </tbody>
                   </table>
                 </div>
+                {currentTab.isTabOpen && (
+                  <div className="card-body border-top">
+                    <fieldset>
+                      <legend className="fs-6 fw-bold">Forma de pagamento</legend>
+                      <div className="d-flex flex-wrap gap-3">
+                        {[
+                          ["cash", "Dinheiro", "bi-cash-stack"],
+                          ["card", "Maquineta", "bi-credit-card"],
+                          ["split", "Dividido", "bi-arrow-left-right"],
+                        ].map(([value, label, icon]) => (
+                          <div className="form-check" key={value}>
+                            <input
+                              id={`payment-${value}`}
+                              className="form-check-input"
+                              type="radio"
+                              name="payment-method"
+                              value={value}
+                              checked={paymentMethod === value}
+                              onChange={() => {
+                                setPaymentMethod(value);
+                                if (value === "split") {
+                                  setSplitCashAmount(
+                                    (Number(currentTab.totalAmount ?? 0) / 2).toFixed(2)
+                                  );
+                                }
+                              }}
+                            />
+                            <label className="form-check-label" htmlFor={`payment-${value}`}>
+                              <i className={`bi ${icon} me-1`} aria-hidden="true" />
+                              {label}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      {paymentMethod === "split" && (
+                        <div className="row align-items-end mt-3">
+                          <div className="col-12 col-sm-6">
+                            <label htmlFor="split-cash-amount" className="form-label">
+                              Valor em dinheiro
+                            </label>
+                            <input
+                              id="split-cash-amount"
+                              type="number"
+                              className="form-control"
+                              min="0.01"
+                              max={Math.max(0, (totalDueCents - 1) / 100).toFixed(2)}
+                              step="0.01"
+                              value={splitCashAmount}
+                              onChange={(event) => setSplitCashAmount(event.target.value)}
+                              aria-invalid={!isSplitPaymentValid}
+                            />
+                          </div>
+                          <div className="col-12 col-sm-6 mt-3 mt-sm-0">
+                            <span className="form-label d-block">Valor na maquineta</span>
+                            <strong>
+                              {formatCurrency((totalDueCents - splitCashCents) / 100)}
+                            </strong>
+                          </div>
+                          {!isSplitPaymentValid && (
+                            <div className="col-12">
+                              <div className="form-text text-danger">
+                                Informe um valor em dinheiro maior que zero e menor que o total.
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </fieldset>
+                  </div>
+                )}
                 <div className="card-footer bg-light p-4 d-flex justify-content-between align-items-center">
                   <div>
                     <span className="text-muted text-uppercase fw-bold" style={{ letterSpacing: "1px" }}>
@@ -311,7 +405,11 @@ export default function CheckoutBoard() {
                       <i className="bi bi-check-all me-2" /> <span>Pago</span>
                     </button>
                   ) : (
-                    <button className="btn btn-success btn-lg px-5 shadow-sm" onClick={closeTab} disabled={isProcessingPayment}>
+                    <button
+                      className="btn btn-success btn-lg px-5 shadow-sm"
+                      onClick={closeTab}
+                      disabled={isProcessingPayment || !isSplitPaymentValid}
+                    >
                       {isProcessingPayment ? (
                         <span>Processando...</span>
                       ) : (

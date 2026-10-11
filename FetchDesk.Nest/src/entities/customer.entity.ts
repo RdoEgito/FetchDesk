@@ -1,4 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { CustomerPaymentEntity } from "./customer-payment.entity";
 import { OrderEntity } from "./order.entity";
 
 @Entity("customers")
@@ -14,4 +15,7 @@ export class CustomerEntity {
 
   @OneToMany(() => OrderEntity, (order) => order.customer, { cascade: true })
   orders!: OrderEntity[];
+
+  @OneToMany(() => CustomerPaymentEntity, (payment) => payment.customer)
+  payments!: CustomerPaymentEntity[];
 }
