@@ -61,7 +61,26 @@ export default function CheckoutBoard() {
     try {
       const response = await apiFetch(`/customers/${selectedCustomerId}/close-tab`, { method: "PATCH" });
       if (response.ok) {
-        setCurrentTab((tab) => (tab ? { ...tab, isTabOpen: false } : tab));
+        const today = new Date().toISOString().slice(0, 10);
+        setCurrentTab((tab) => {
+          if (!tab) return tab;
+          const ordersPaidToday = (tab.orders || []).filter(
+            (order) => new Date(order.createdAt).toISOString().slice(0, 10) === today
+          );
+          const paidTodayOrders = [...(tab.paidTodayOrders || [])];
+          const existingOrderIds = new Set(paidTodayOrders.map((order) => order.id));
+
+          return {
+            ...tab,
+            isTabOpen: false,
+            totalAmount: 0,
+            orders: [],
+            paidTodayOrders: [
+              ...paidTodayOrders,
+              ...ordersPaidToday.filter((order) => !existingOrderIds.has(order.id)),
+            ],
+          };
+        });
         setOpenCustomers((customers) =>
           customers.map((customer) =>
             customer.id === selectedCustomerId ? { ...customer, isTabOpen: false } : customer
@@ -107,6 +126,35 @@ export default function CheckoutBoard() {
     }
     return Array.from(map.values());
   }, [currentTab]);
+
+  const paidTodayItems = useMemo(() => {
+    if (!currentTab) return [];
+    const map = new Map();
+    for (const order of currentTab.paidTodayOrders || []) {
+      for (const item of order.items || []) {
+        const productName = item.product?.name?.trim()
+          ? item.product.name
+          : "Produto nao identificado";
+        const unitPrice = Number(item.priceAtPurchase ?? 0);
+        const key = `${item.productId}__${unitPrice}__${productName}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            productId: item.productId,
+            productName,
+            quantity: 0,
+            unitPrice,
+            subTotal: 0,
+          });
+        }
+        const entry = map.get(key);
+        entry.quantity += 1;
+        entry.subTotal += unitPrice;
+      }
+    }
+    return Array.from(map.values());
+  }, [currentTab]);
+
+  const paidTodayTotal = paidTodayItems.reduce((sum, item) => sum + item.subTotal, 0);
 
   useEffect(() => {
     loadOpenCustomersAsync();
@@ -275,6 +323,39 @@ export default function CheckoutBoard() {
                   )}
                 </div>
               </div>
+              {paidTodayItems.length > 0 && (
+                <section className="card shadow-sm border-0 mt-4">
+                  <div className="card-header bg-light">
+                    <h5 className="mb-0">Itens comprados hoje e já pagos</h5>
+                  </div>
+                  <div className="card-body p-0">
+                    <table className="table table-striped table-hover mb-0">
+                      <thead className="table-light">
+                        <tr>
+                          <th className="ps-4">Produto</th>
+                          <th className="text-center">Qtd</th>
+                          <th className="text-end">V. Unitário</th>
+                          <th className="text-end pe-4">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paidTodayItems.map((item) => (
+                          <tr key={`${item.productId}-${item.unitPrice}-${item.productName}`}>
+                            <td className="ps-4 fw-bold">{item.productName}</td>
+                            <td className="text-center">{item.quantity}</td>
+                            <td className="text-end">{formatCurrency(item.unitPrice)}</td>
+                            <td className="text-end pe-4">{formatCurrency(item.subTotal)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="card-footer d-flex justify-content-between align-items-center">
+                    <strong>Total já pago hoje</strong>
+                    <strong className="text-success">{formatCurrency(paidTodayTotal)}</strong>
+                  </div>
+                </section>
+              )}
               {feedbackMessage ? <div className="alert alert-info mt-3">{feedbackMessage}</div> : null}
             </>
           ) : (

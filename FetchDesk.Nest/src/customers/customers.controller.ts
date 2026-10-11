@@ -40,10 +40,23 @@ export class CustomersController {
         isTabOpen: false,
         totalAmount: 0,
         orders: [],
+        paidTodayOrders: [],
       };
     }
 
     const openOrders = (customer.orders || []).filter((order) => !order.isPaid);
+    const today = new Date();
+    const startOfToday = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+    );
+    const startOfTomorrow = new Date(startOfToday);
+    startOfTomorrow.setUTCDate(startOfTomorrow.getUTCDate() + 1);
+    const paidOrdersToday = (customer.orders || []).filter(
+      (order) =>
+        order.isPaid &&
+        order.createdAt >= startOfToday &&
+        order.createdAt < startOfTomorrow
+    );
     const totalAmount = openOrders
       .flatMap((order) => order.items || [])
       .reduce((sum, item) => sum + Number(item.priceAtPurchase), 0);
@@ -53,6 +66,7 @@ export class CustomersController {
       isTabOpen: customer.isTabOpen,
       totalAmount,
       orders: openOrders,
+      paidTodayOrders: paidOrdersToday,
     };
   }
 
