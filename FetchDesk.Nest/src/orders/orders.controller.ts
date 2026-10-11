@@ -25,10 +25,14 @@ export class OrdersController {
 
   @Post()
   async createOrder(@Body() body: CreateOrderBody) {
-    let customer = await this.customers.findOne({ where: { name: body.customerName } });
+    const customerName = body.customerName.trim();
+    let customer = await this.customers
+      .createQueryBuilder("customer")
+      .where("LOWER(TRIM(customer.name)) = LOWER(:customerName)", { customerName })
+      .getOne();
     if (!customer) {
       customer = await this.customers.save(
-        this.customers.create({ name: body.customerName, isTabOpen: true })
+        this.customers.create({ name: customerName, isTabOpen: true })
       );
     } else if (!customer.isTabOpen) {
       customer.isTabOpen = true;
