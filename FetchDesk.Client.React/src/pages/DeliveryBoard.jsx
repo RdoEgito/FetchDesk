@@ -20,6 +20,8 @@ export default function DeliveryBoard() {
   const [selectedDate, setSelectedDate] = useState(() =>
     params.date && isValidRouteDate(params.date) ? params.date : getTodayDate()
   );
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [expandedCustomer, setExpandedCustomer] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
 
@@ -128,6 +130,26 @@ export default function DeliveryBoard() {
     return Array.from(map.entries());
   }, [filteredItems]);
 
+  const visibleCustomerGroups = useMemo(() => {
+    const search = customerSearch
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("pt-BR");
+
+    if (!search) {
+      return groupedItems;
+    }
+
+    return groupedItems.filter(([customerName]) =>
+      customerName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("pt-BR")
+        .includes(search)
+    );
+  }, [customerSearch, groupedItems]);
+
   const availableDates = useMemo(() => {
     const dates = Array.from(
       new Set(pendingItems.map((item) => formatDate(item.orderCreatedAt)).filter(Boolean))
@@ -196,6 +218,27 @@ export default function DeliveryBoard() {
         </div>
       </div>
 
+      <div className="row mb-3">
+        <div className="col-12 col-md-8 col-lg-6">
+          <label htmlFor="delivery-customer-search" className="form-label">
+            Buscar cliente
+          </label>
+          <div className="input-group">
+            <span className="input-group-text">
+              <i className="bi bi-search" aria-hidden="true" />
+            </span>
+            <input
+              id="delivery-customer-search"
+              type="search"
+              className="form-control"
+              placeholder="Digite o nome do cliente"
+              value={customerSearch}
+              onChange={(event) => setCustomerSearch(event.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
       {!isConnected ? <div className="alert alert-warning shadow-sm">Conectando ao servidor em tempo real...</div> : null}
 
       {pendingItems.length === 0 ? (
@@ -209,57 +252,80 @@ export default function DeliveryBoard() {
             <div className="small mt-2">Datas com histórico de pedidos: {availableDates.join(", ")}</div>
           ) : null}
         </div>
+      ) : visibleCustomerGroups.length === 0 ? (
+        <div className="alert alert-info text-center shadow-sm">
+          Nenhum cliente encontrado com esse nome.
+        </div>
       ) : (
         <div className={`row ${isFlashing ? "flash-update" : ""}`}>
           <div className="col-12 col-md-8 col-lg-6">
-            {groupedItems.map(([customerName, items]) => (
+            {visibleCustomerGroups.map(([customerName, items]) => (
               <div key={customerName} className="card mb-4 shadow-sm border-0">
                 <div className="card-header bg-primary text-white py-2">
-                  <h5 className="mb-0">
+                  <button
+                    type="button"
+                    className="delivery-customer-toggle"
+                    aria-expanded={expandedCustomer === customerName}
+                    onClick={() =>
+                      setExpandedCustomer((current) =>
+                        current === customerName ? null : customerName
+                      )
+                    }
+                  >
+                    <i
+                      className={`bi me-2 ${
+                        expandedCustomer === customerName
+                          ? "bi-caret-right-fill"
+                          : "bi-caret-down-fill"
+                      }`}
+                      aria-hidden="true"
+                    />
                     <i className="bi bi-person-fill me-2" />
                     {customerName}
-                  </h5>
+                  </button>
                 </div>
-                <ul className="list-group list-group-flush">
-                  {items
-                    .slice()
-                    .sort((a, b) => Number(a.isDelivered) - Number(b.isDelivered))
-                    .map((item) => (
-                      <li
-                        key={item.itemId}
-                        className={`list-group-item d-flex justify-content-between align-items-center p-3 item-row ${
-                          item.isDelivered ? "item-delivered" : "hover-bg-light"
-                        }`}
-                      >
-                        <div>
-                          <strong className={`fs-5 d-block ${item.isDelivered ? "text-strikethrough" : ""}`}>
-                            {item.productName}
-                          </strong>
-                          <span className="text-muted small">Ficha: {item.itemId.slice(0, 8)}</span>
-                        </div>
-                        <div className="d-flex gap-2 align-items-center">
-                          {item.isDelivered ? (
+                {expandedCustomer === customerName && (
+                  <ul className="list-group list-group-flush">
+                    {items
+                      .slice()
+                      .sort((a, b) => Number(a.isDelivered) - Number(b.isDelivered))
+                      .map((item) => (
+                        <li
+                          key={item.itemId}
+                          className={`list-group-item d-flex justify-content-between align-items-center p-3 item-row ${
+                            item.isDelivered ? "item-delivered" : "hover-bg-light"
+                          }`}
+                        >
+                          <div>
+                            <strong className={`fs-5 d-block ${item.isDelivered ? "text-strikethrough" : ""}`}>
+                              {item.productName}
+                            </strong>
+                            <span className="text-muted small">Ficha: {item.itemId.slice(0, 8)}</span>
+                          </div>
+                          <div className="d-flex gap-2 align-items-center">
+                            {item.isDelivered ? (
+                              <button
+                                className="btn btn-sm btn-outline-warning rounded-circle px-2"
+                                title="Desfazer entrega"
+                                onClick={() => revertDelivery(item.itemId)}
+                              >
+                                <i className="bi bi-arrow-counterclockwise" />
+                              </button>
+                            ) : null}
                             <button
-                              className="btn btn-sm btn-outline-warning rounded-circle px-2"
-                              title="Desfazer entrega"
-                              onClick={() => revertDelivery(item.itemId)}
+                              className={`btn btn-sm px-3 rounded-pill fw-bold ${
+                                item.isDelivered ? "btn-secondary" : "btn-outline-success"
+                              }`}
+                              onClick={() => markAsDelivered(item.itemId)}
+                              disabled={item.isDelivered}
                             >
-                              <i className="bi bi-arrow-counterclockwise" />
+                              {item.isDelivered ? "Entregue" : "Entregar"}
                             </button>
-                          ) : null}
-                          <button
-                            className={`btn btn-sm px-3 rounded-pill fw-bold ${
-                              item.isDelivered ? "btn-secondary" : "btn-outline-success"
-                            }`}
-                            onClick={() => markAsDelivered(item.itemId)}
-                            disabled={item.isDelivered}
-                          >
-                            {item.isDelivered ? "Entregue" : "Entregar"}
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                </ul>
+                          </div>
+                        </li>
+                      ))}
+                  </ul>
+                )}
               </div>
             ))}
           </div>

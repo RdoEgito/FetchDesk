@@ -2,6 +2,24 @@
   transition: all 0.3s ease-in-out;
 }
 
+.delivery-customer-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.delivery-customer-toggle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
 .item-delivered {
   background-color: #f8f9fa !important;
   opacity: 0.6;
