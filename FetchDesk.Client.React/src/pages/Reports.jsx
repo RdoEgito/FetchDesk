@@ -11,6 +11,13 @@ const toDateKey = (date) => {
 
 const getTodayDate = () => toDateKey(new Date());
 
+const formatDateLabel = (date) =>
+  date
+    ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(
+        new Date(`${date}T00:00:00`)
+      )
+    : null;
+
 function ReportCalendar({ startDate, endDate, onSelectDate }) {
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const today = new Date();
@@ -68,8 +75,12 @@ function ReportCalendar({ startDate, endDate, onSelectDate }) {
   const hasCompleteRange = Boolean(startDate && endDate);
 
   const changeMonth = (amount) => {
-    setVisibleMonth(
-      new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + amount, 1)
+    setVisibleMonth((currentMonth) =>
+      new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth() + amount,
+        1
+      )
     );
   };
 
@@ -142,6 +153,22 @@ function ReportCalendar({ startDate, endDate, onSelectDate }) {
               </button>
             );
           })}
+        </div>
+
+        <div className="small text-muted mt-3" aria-live="polite">
+          {startDate && (
+            <div>
+              Início selecionado: <strong>{formatDateLabel(startDate)}</strong>
+            </div>
+          )}
+          {endDate && endDate !== startDate && (
+            <div>
+              Fim selecionado: <strong>{formatDateLabel(endDate)}</strong>
+            </div>
+          )}
+          {startDate && !endDate && (
+            <div>Escolha a data final; a data inicial será mantida.</div>
+          )}
         </div>
 
         <div className="small text-muted mt-3">
