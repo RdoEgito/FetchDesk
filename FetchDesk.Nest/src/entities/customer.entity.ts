@@ -13,6 +13,9 @@ export class CustomerEntity {
   @Column({ default: true })
   isTabOpen!: boolean;
 
+  @Column("text", { nullable: true })
+  observation!: string | null;
+
   @OneToMany(() => OrderEntity, (order) => order.customer, { cascade: true })
   orders!: OrderEntity[];
 

@@ -20,6 +20,7 @@ import { OrderGateway } from "../realtime/order.gateway";
 type CloseTabPaymentBody = {
   cashAmount: number;
   cardAmount: number;
+  observation?: string;
 };
 
 @Controller("customers")
@@ -57,6 +58,7 @@ export class CustomersController {
         totalAmount: 0,
         orders: [],
         paidTodayOrders: [],
+        observation: null,
       };
     }
 
@@ -83,7 +85,28 @@ export class CustomersController {
       totalAmount,
       orders: openOrders,
       paidTodayOrders: paidOrdersToday,
+      observation: customer.observation,
     };
+  }
+
+  @Patch(":customerId/observation")
+  async updateObservation(
+    @Param("customerId") customerId: string,
+    @Body() body: { observation: string }
+  ) {
+    if (typeof body?.observation !== "string") {
+      throw new BadRequestException("A observação deve ser um texto.");
+    }
+
+    const customer = await this.customers.findOne({ where: { id: customerId } });
+    if (!customer) {
+      throw new NotFoundException("Cliente não encontrado.");
+    }
+
+    customer.observation = body.observation.trim() || null;
+    await this.customers.save(customer);
+
+    return { observation: customer.observation };
   }
 
   @Patch(":customerId/close-tab")
@@ -100,6 +123,9 @@ export class CustomersController {
       cardAmount < 0
     ) {
       throw new BadRequestException("Informe valores válidos para dinheiro e maquineta.");
+    }
+    if (body.observation !== undefined && typeof body.observation !== "string") {
+      throw new BadRequestException("A observação deve ser um texto.");
     }
 
     return this.dataSource.transaction(async (manager) => {
@@ -138,6 +164,9 @@ export class CustomersController {
       );
 
       customer.isTabOpen = false;
+      if (body.observation !== undefined) {
+        customer.observation = body.observation.trim() || null;
+      }
       await manager.save(customer);
 
       for (const order of openOrders) {

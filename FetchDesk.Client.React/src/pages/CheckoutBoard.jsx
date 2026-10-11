@@ -9,6 +9,7 @@ export default function CheckoutBoard() {
   const [currentTab, setCurrentTab] = useState(null);
   const [isLoadingTab, setIsLoadingTab] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isSavingObservation, setIsSavingObservation] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [isPaidCustomersExpanded, setIsPaidCustomersExpanded] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
@@ -77,6 +78,7 @@ export default function CheckoutBoard() {
         body: JSON.stringify({
           cashAmount: cashCents / 100,
           cardAmount: cardCents / 100,
+          observation: currentTab?.observation ?? "",
         }),
       });
       if (response.ok) {
@@ -94,6 +96,7 @@ export default function CheckoutBoard() {
             isTabOpen: false,
             totalAmount: 0,
             orders: [],
+            observation: tab.observation?.trim() || null,
             paidTodayOrders: [
               ...paidTodayOrders,
               ...ordersPaidToday.filter((order) => !existingOrderIds.has(order.id)),
@@ -114,6 +117,33 @@ export default function CheckoutBoard() {
       setFeedbackMessage(`Erro de conexão: ${error.message}`);
     } finally {
       setIsProcessingPayment(false);
+    }
+  }
+
+  async function saveObservation() {
+    if (!selectedCustomerId || !currentTab) return;
+    setIsSavingObservation(true);
+    setFeedbackMessage("");
+    try {
+      const response = await apiFetch(
+        `/customers/${selectedCustomerId}/observation`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ observation: currentTab.observation ?? "" }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const result = await response.json();
+      setCurrentTab((tab) =>
+        tab ? { ...tab, observation: result.observation } : tab
+      );
+      setFeedbackMessage("Observação salva com sucesso.");
+    } catch (error) {
+      setFeedbackMessage(`Erro ao salvar a observação: ${error.message}`);
+    } finally {
+      setIsSavingObservation(false);
     }
   }
 
@@ -322,6 +352,33 @@ export default function CheckoutBoard() {
                       )}
                     </tbody>
                   </table>
+                </div>
+                <div className="card-body border-top">
+                  <label htmlFor="customer-observation" className="form-label fw-bold">
+                    Observação
+                  </label>
+                  <textarea
+                    id="customer-observation"
+                    className="form-control"
+                    rows={3}
+                    value={currentTab.observation ?? ""}
+                    onChange={(event) =>
+                      setCurrentTab((tab) =>
+                        tab ? { ...tab, observation: event.target.value } : tab
+                      )
+                    }
+                    placeholder="Adicione uma observação para esta conta"
+                  />
+                  {!currentTab.isTabOpen && (
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary btn-sm mt-2"
+                      onClick={saveObservation}
+                      disabled={isSavingObservation}
+                    >
+                      {isSavingObservation ? "Salvando..." : "Salvar observação"}
+                    </button>
+                  )}
                 </div>
                 {currentTab.isTabOpen && (
                   <div className="card-body border-top">
